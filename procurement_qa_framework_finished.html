@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ProcureQA Enterprise — Procurement Quality Framework</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#080e1a;--bg2:#0d1526;--bg3:#111c32;--bg4:#162038;--bg5:#1c2a45;
+--text:#dde4ef;--muted:#7a8fa8;--soft:#45586e;--dim:#2d3f52;
+--border:rgba(120,150,190,.1);--border2:rgba(120,150,190,.18);--border3:rgba(120,150,190,.3);
+--accent:#2563eb;--accent2:#1d4ed8;--accentL:rgba(37,99,235,.12);--accentT:#93c5fd;--accentG:rgba(37,99,235,.35);
+--teal:#0d9488;--tealL:rgba(13,148,136,.12);--tealT:#5eead4;
+--amber:#d97706;--amberL:rgba(217,119,6,.12);--amberT:#fbbf24;
+--red:#dc2626;--redL:rgba(220,38,38,.12);--redT:#f87171;
+--cyan:#0891b2;--cyanL:rgba(8,145,178,.12);--cyanT:#67e8f9;
+--green:#16a34a;--greenL:rgba(22,163,74,.12);--greenT:#4ade80;
+--r:3px;--r2:5px;--r3:8px;
+--shadow:0 2px 8px rgba(0,0,0,.5),0 1px 2px rgba(0,0,0,.4);
+--shadow2:0 8px 32px rgba(0,0,0,.6),0 2px 8px rgba(0,0,0,.4);
+}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--soft)}
+
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+code,kbd,.mono{font-family:'JetBrains Mono',monospace}
+
+/* ── SYSTEM BAR ─────────────────────── */
+.sysbar{height:26px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.4rem;font-size:10.5px;color:var(--soft);position:sticky;top:0;z-index:200;gap:0}
+.sysbar-left{display:flex;align-items:center;gap:8px}
+.sys-dot{width:5px;height:5px;border-radius:50%;background:var(--greenT);box-shadow:0 0 6px rgba(74,222,128,.5);flex-shrink:0}
+.sysbar-right{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:10px}
+.sysbar-right span{color:var(--dim)}
+.sysbar-right b{color:var(--soft);font-weight:500}
+.sys-sep{width:1px;height:12px;background:var(--border2)}
+
+/* ── TOP NAV ─────────────────────────── */
+.top{height:50px;background:linear-gradient(90deg,var(--bg3) 0%,var(--bg2) 100%);border-bottom:1px solid var(--border2);display:flex;align-items:center;padding:0 1.4rem;position:sticky;top:26px;z-index:150;gap:14px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0}
+.logo{width:30px;height:30px;border-radius:var(--r2);background:linear-gradient(135deg,#1e40af,#2563eb);display:grid;place-items:center;color:white;font-size:11px;font-weight:800;box-shadow:0 0 0 1px rgba(37,99,235,.4),0 4px 12px rgba(37,99,235,.3);font-family:'JetBrains Mono',monospace;letter-spacing:-.5px}
+.brand-stack{display:flex;flex-direction:column;line-height:1.1}
+.brand-name{font-size:13px;font-weight:700;color:var(--text);letter-spacing:-.01em}
+.brand-sub{font-size:9.5px;color:var(--soft);letter-spacing:.04em;text-transform:uppercase}
+.top-div{width:1px;height:18px;background:var(--border2);flex-shrink:0}
+.breadcrumb{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--soft)}
+.breadcrumb .bc-cur{color:var(--accentT);font-weight:500}
+.bc-sep{color:var(--dim)}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.top-badge{background:var(--accentL);color:var(--accentT);font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:2px;letter-spacing:.06em;text-transform:uppercase;border:1px solid rgba(37,99,235,.25)}
+.top-btn{border:0;background:none;color:var(--muted);cursor:pointer;padding:5px;border-radius:var(--r);transition:.12s;font-size:14px;line-height:1;display:grid;place-items:center}
+.top-btn:hover{background:var(--bg5);color:var(--text)}
+.user-chip{display:flex;align-items:center;gap:6px;background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r2);padding:4px 8px;font-size:11px;color:var(--muted);cursor:default}
+.user-av{width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--teal));display:grid;place-items:center;font-size:9px;color:white;font-weight:700;flex-shrink:0}
+
+/* ── LAYOUT ──────────────────────────── */
+.layout{display:grid;grid-template-columns:210px minmax(0,1fr);min-height:calc(100vh - 76px)}
+
+/* ── SIDEBAR ─────────────────────────── */
+.side{background:var(--bg2);border-right:1px solid var(--border);padding:.5rem 0 1rem;position:sticky;top:76px;height:calc(100vh - 76px);overflow:auto;display:flex;flex-direction:column}
+.side-section{margin-bottom:.25rem}
+.side-label{font-size:9.5px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;padding:10px 14px 4px}
+.navbtn{width:100%;border:0;background:none;color:var(--muted);display:flex;align-items:center;gap:8px;text-align:left;padding:7px 14px;cursor:pointer;font-family:inherit;font-size:12px;transition:.12s;border-left:2px solid transparent;position:relative}
+.navbtn:hover{background:var(--bg3);color:var(--text);border-left-color:var(--border3)}
+.navbtn.active{background:var(--accentL);color:var(--accentT);border-left-color:var(--accent);font-weight:600}
+.navbtn.done{color:var(--muted)}
+.num{width:16px;height:16px;border-radius:2px;display:grid;place-items:center;background:var(--bg5);font-size:9px;font-weight:700;flex-shrink:0;font-family:'JetBrains Mono',monospace}
+.navbtn.active .num{background:var(--accent);color:white}
+.navbtn.done .num{background:var(--teal);color:white}
+.ck{margin-left:auto;font-size:10px;opacity:0;color:var(--tealT);transition:.15s}
+.navbtn.done .ck{opacity:1}
+.side-sep{height:1px;background:var(--border);margin:.4rem 0}
+.side-bottom{margin-top:auto;padding:10px 14px;border-top:1px solid var(--border);font-size:10px;color:var(--dim);display:flex;flex-direction:column;gap:3px}
+.side-bottom b{color:var(--soft);font-weight:500}
+
+/* ── MAIN ────────────────────────────── */
+.main{background:var(--bg);overflow:hidden}
+.panel{display:none}
+.panel.active{display:block;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* ── PANEL HEADER ────────────────────── */
+.ph{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 1.4rem;display:flex;align-items:center;gap:12px;position:sticky;top:76px;z-index:80}
+.ph-icon{width:28px;height:28px;border-radius:var(--r2);display:grid;place-items:center;font-size:13px;flex-shrink:0}
+.ph-icon.blue{background:var(--accentL);border:1px solid rgba(37,99,235,.2)}
+.ph-icon.teal{background:var(--tealL);border:1px solid rgba(13,148,136,.2)}
+.ph-icon.amber{background:var(--amberL);border:1px solid rgba(217,119,6,.2)}
+.ph-icon.cyan{background:var(--cyanL);border:1px solid rgba(8,145,178,.2)}
+.ph-title{font-size:14px;font-weight:700;letter-spacing:-.01em}
+.ph-sub{font-size:10.5px;color:var(--muted);margin-top:1px}
+.ph-actions{margin-left:auto;display:flex;align-items:center;gap:6px}
+.pb{padding:1.2rem 1.4rem}
+
+/* ── CARDS ───────────────────────────── */
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);margin-bottom:.85rem;box-shadow:var(--shadow);overflow:hidden}
+.ch{background:var(--bg4);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ct{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;gap:6px}
+.ct-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.cb{padding:12px}
+h1{font-size:17px;letter-spacing:-.02em;font-weight:700}
+.helper{font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:.7rem}
+
+/* ── BUTTONS ─────────────────────────── */
+.btn1,.btn2,.btnD{border-radius:var(--r);cursor:pointer;transition:.12s;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:11.5px;font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.btn1{border:1px solid rgba(37,99,235,.7);background:linear-gradient(135deg,#2563eb,#1d4ed8);color:white;padding:7px 14px;box-shadow:0 2px 10px rgba(37,99,235,.3)}
+.btn1:hover{background:linear-gradient(135deg,#1d4ed8,#1e40af);box-shadow:0 4px 14px rgba(37,99,235,.4)}
+.btn1:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.btn2{border:1px solid var(--border2);background:var(--bg4);color:var(--muted);padding:6px 12px}
+.btn2:hover{border-color:rgba(37,99,235,.5);color:var(--accentT);background:var(--accentL)}
+.btnD{border:1px solid var(--redL);background:var(--redL);color:var(--redT);padding:6px 12px}
+.btnD:hover{opacity:.8}
+.full{width:100%}
+.btnrow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:.75rem}
+
+/* ── UPLOAD ZONE ─────────────────────── */
+input[type=file]{display:none}
+.drop{border:1px dashed var(--border2);border-radius:var(--r2);padding:2rem 1.5rem;text-align:center;cursor:pointer;transition:.2s;margin-bottom:.75rem;background:var(--bg2);position:relative}
+.drop:hover,.drop.drag{border-color:var(--accent);background:var(--accentL);border-style:solid}
+.drop-icon{font-size:1.8rem;display:block;margin-bottom:8px;transition:.2s;filter:grayscale(30%)}
+.drop:hover .drop-icon,.drop.drag .drop-icon{transform:scale(1.1);filter:none}
+.drop-title{font-weight:600;color:var(--text);margin-bottom:3px;font-size:13px}
+.drop-sub{font-size:11px;color:var(--soft);margin-bottom:12px}
+.fmts{display:flex;flex-wrap:wrap;justify-content:center;gap:4px}
+.fmt{background:var(--bg5);border:1px solid var(--border2);border-radius:2px;font-size:9.5px;font-weight:700;padding:2px 6px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+
+/* ── FILE LIST ───────────────────────── */
+.file-list{display:flex;flex-direction:column;gap:3px;margin-bottom:.75rem}
+.file{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);font-size:12px;border-left:2px solid var(--teal);animation:fadeIn .2s ease}
+.fname{flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.fmeta{font-size:10.5px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.x{border:0;background:none;color:var(--dim);cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;border-radius:2px;transition:.12s}
+.x:hover{color:var(--redT);background:var(--redL)}
+
+/* ── SCENARIO CARDS ──────────────────── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem}
+.scenario{border:1px solid var(--border2);border-radius:var(--r2);padding:12px;cursor:pointer;background:var(--bg2);transition:.15s;position:relative;overflow:hidden}
+.scenario::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--border2);transition:.15s}
+.scenario:hover{border-color:var(--border3);background:var(--bg4)}
+.scenario:hover::before{background:var(--accent)}
+.scenario.sel{border-color:rgba(37,99,235,.5);background:var(--accentL)}
+.scenario.sel::before{background:var(--accent)}
+.scnum{font-size:9.5px;font-weight:700;color:var(--soft);margin-bottom:5px;letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.sct{font-size:12.5px;font-weight:700;margin-bottom:4px;color:var(--text)}
+.scd{font-size:11px;color:var(--muted);line-height:1.45}
+#scenarioHint{background:var(--bg2);border:1px solid var(--border);border-left:2px solid var(--accent);padding:8px 12px;border-radius:var(--r);font-size:11.5px;color:var(--muted);margin-top:10px}
+
+/* ── THRESHOLDS ──────────────────────── */
+.thgrid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.th label{font-size:10px;font-weight:700;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em}
+.th span{color:var(--accentT);font-family:'JetBrains Mono',monospace;font-weight:400}
+input[type=range]{width:100%;accent-color:var(--accent);height:3px}
+
+/* ── COLUMN MAP ──────────────────────── */
+.mapgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mapitem label{font-size:10px;color:var(--muted);display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.mapitem select{width:100%;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg2);color:var(--text);font-family:inherit;font-size:11.5px;transition:.12s;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%2345586e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+.mapitem select:focus{outline:1px solid var(--accent);border-color:var(--accent)}
+
+/* ── TABLES ──────────────────────────── */
+.tablewrap{overflow:auto;border:1px solid var(--border);border-radius:var(--r2)}
+table{width:100%;border-collapse:collapse;font-size:11.5px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+th{background:var(--bg4);font-weight:700;color:var(--soft);font-size:9.5px;text-transform:uppercase;letter-spacing:.07em}
+tr:nth-child(even) td{background:rgba(255,255,255,.012)}
+tr:hover td{background:var(--bg4)!important}
+tr:last-child td{border-bottom:0}
+td{color:var(--text)}
+
+/* ── KPI METRICS ─────────────────────── */
+.metricgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:.65rem;margin-bottom:.85rem}
+.metric{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;position:relative;overflow:hidden;transition:.15s}
+.metric::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.metric:nth-child(1)::after{background:linear-gradient(90deg,var(--accent),var(--accentT))}
+.metric:nth-child(2)::after{background:linear-gradient(90deg,var(--teal),var(--tealT))}
+.metric:nth-child(3)::after{background:linear-gradient(90deg,var(--cyan),var(--cyanT))}
+.metric:nth-child(4)::after{background:linear-gradient(90deg,var(--amber),var(--amberT))}
+.metric:hover{border-color:var(--border2);transform:translateY(-1px)}
+.mlabel{font-size:9.5px;color:var(--soft);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.mval{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:-.02em;line-height:1.1}
+.good{color:var(--greenT)}.warn{color:var(--amberT)}.bad{color:var(--redT)}.neutral{color:var(--text)}
+
+/* ── BADGES ──────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:2px;letter-spacing:.05em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.bG{background:var(--greenL);color:var(--greenT);border:1px solid rgba(22,163,74,.2)}
+.bW{background:var(--amberL);color:var(--amberT);border:1px solid rgba(217,119,6,.2)}
+.bD{background:var(--redL);color:var(--redT);border:1px solid rgba(220,38,38,.2)}
+.bI{background:var(--cyanL);color:var(--cyanT);border:1px solid rgba(8,145,178,.2)}
+.bN{background:var(--bg5);color:var(--muted);border:1px solid var(--border2)}
+.bP{background:var(--accentL);color:var(--accentT);border:1px solid rgba(37,99,235,.2)}
+
+/* ── SUMMARY / NOTICES ───────────────── */
+.summary{background:var(--accentL);border:1px solid rgba(37,99,235,.2);border-left:2px solid var(--accent);color:var(--accentT);padding:11px 14px;border-radius:var(--r2);font-size:12.5px;line-height:1.7;margin-bottom:.85rem}
+.notice{background:var(--amberL);border:1px solid rgba(217,119,6,.2);border-left:2px solid var(--amber);color:var(--amberT);padding:9px 12px;border-radius:var(--r);font-size:12px;margin-bottom:.7rem}
+
+/* ── CHARTS ──────────────────────────── */
+.chartrow{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.85rem}
+.chartbox{height:270px;position:relative}
+
+/* ── EMPTY STATES ────────────────────── */
+.empty{text-align:center;padding:2.5rem;color:var(--muted);background:var(--bg2);border:1px solid var(--border);border-radius:var(--r2)}
+.empty-icon{font-size:1.8rem;display:block;margin-bottom:8px;opacity:.25}
+.empty p{font-size:12px}
+
+/* ── QUALITY GATES ───────────────────── */
+.gate{display:grid;grid-template-columns:minmax(0,1fr) 80px 90px 68px;gap:8px;align-items:start;border-bottom:1px solid var(--border);padding:9px 0;font-size:12px}
+.gate:last-child{border-bottom:0}
+.gname{font-weight:600;color:var(--text);font-size:12px}
+.gmeta,.small{font-size:10.5px;color:var(--muted)}
+
+/* ── RISKS & EXPLANATIONS ────────────── */
+.risk,.explain{padding:9px 0;border-bottom:1px solid var(--border)}
+.risk:last-child,.explain:last-child{border-bottom:0}
+.rhead,.ehead{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.rtitle,.ename{flex:1;font-weight:600;font-size:12px;color:var(--text)}
+.rdetail,.raction,.etxt,.ldetail,.laction{font-size:11px;color:var(--muted)}
+.raction,.laction{font-style:italic;margin-top:2px}
+
+/* ── AUDIT LOG ───────────────────────── */
+.log{padding:9px 11px;border-left:2px solid var(--border2);background:var(--bg2);border-radius:var(--r);margin-bottom:4px;font-size:11.5px;transition:.12s}
+.log:hover{transform:translateX(2px);border-left-color:var(--accent)}
+.log.fail{border-left-color:var(--red)}.log.riskL{border-left-color:var(--amber)}.log.rem{border-left-color:var(--teal)}.log.info{border-left-color:var(--accent)}
+.lhead{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.lts{font-size:9.5px;color:var(--dim);margin-left:auto;font-family:'JetBrains Mono',monospace}
+
+/* ── SPINNER ─────────────────────────── */
+.spin{width:13px;height:13px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── TOAST ───────────────────────────── */
+#toastContainer{position:fixed;top:84px;right:1rem;z-index:3000;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.toast{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);padding:10px 13px;box-shadow:var(--shadow2);display:flex;align-items:flex-start;gap:8px;font-size:11.5px;max-width:330px;pointer-events:all;animation:tIn .2s ease;border-left:2px solid var(--cyan)}
+.toast.ts{border-left-color:var(--greenT)}.toast.te{border-left-color:var(--redT)}.toast.tw{border-left-color:var(--amberT)}
+.toast-ic{font-size:12px;flex-shrink:0;margin-top:1px}.toast-tx{flex:1;line-height:1.45;color:var(--text)}.toast-cl{border:0;background:none;cursor:pointer;color:var(--dim);font-size:15px;padding:0;line-height:1;flex-shrink:0;transition:.12s}.toast-cl:hover{color:var(--text)}
+@keyframes tIn{from{transform:translateX(110%);opacity:0}to{transform:none;opacity:1}}@keyframes tOut{to{transform:translateX(110%);opacity:0}}
+
+/* ── OVERLAY ─────────────────────────── */
+.overlay{position:fixed;inset:0;background:rgba(4,8,18,.85);backdrop-filter:blur(10px);z-index:2000;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.overlay.show{display:flex}
+.bspin{width:40px;height:40px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite}
+#oMsg{font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:.02em;font-family:'JetBrains Mono',monospace}
+
+/* ── RESPONSIVE ──────────────────────── */
+@media(max-width:860px){.layout{grid-template-columns:1fr}.side{display:none}.pb{padding:.75rem}.grid2,.grid3,.grid4,.chartrow,.thgrid,.mapgrid{grid-template-columns:1fr}.metricgrid{grid-template-columns:1fr 1fr}.gate{grid-template-columns:1fr}.breadcrumb{display:none}}
+@media print{.side,.top,.sysbar,.ph,.btnrow,.btn1,.btn2,.btnD,#toastContainer,.overlay{display:none!important}.layout{display:block}.pb{padding:0}.card{box-shadow:none;break-inside:avoid}}
+</style>
+</head>
+<body>
+<div id="toastContainer"></div>
+<div id="loadingOverlay" class="overlay"><div class="bspin"></div><div id="oMsg">PROCESSING…</div></div>
+
+<!-- SYSTEM BAR -->
+<div class="sysbar">
+  <div class="sysbar-left">
+    <span class="sys-dot"></span>
+    <span>System Online</span>
+    <span class="sys-sep"></span>
+    <span>Module: <b>QA-FW-001</b></span>
+    <span class="sys-sep"></span>
+    <span id="sysTime"></span>
+  </div>
+  <div class="sysbar-right">
+    <span>ProcureQA Enterprise</span>
+    <span class="sys-sep"></span>
+    <b>v3.0.0</b>
+    <span class="sys-sep"></span>
+    <span>Session: <b id="sysSession"></b></span>
+  </div>
+</div>
+
+<!-- TOP NAV -->
+<nav class="top">
+  <div class="brand">
+    <div class="logo">QA</div>
+    <div class="brand-stack">
+      <span class="brand-name">ProcureQA</span>
+      <span class="brand-sub">Enterprise Platform</span>
+    </div>
+  </div>
+  <div class="top-div"></div>
+  <div class="breadcrumb">
+    <span>Home</span><span class="bc-sep">›</span>
+    <span>Quality Assurance</span><span class="bc-sep">›</span>
+    <span class="bc-cur" id="bcCurrent">Upload Data</span>
+  </div>
+  <div class="top-right">
+    <div class="top-badge">AI-Enhanced</div>
+    <div class="user-chip">
+      <div class="user-av">U</div>
+      <span>Analyst</span>
+    </div>
+  </div>
+</nav>
+
+<div class="layout">
+<!-- SIDEBAR -->
+<aside class="side">
+  <div class="side-section">
+    <div class="side-label">Workflow</div>
+    <button class="navbtn active" data-panel="upload" onclick="showPanel('upload',this)"><span class="num">01</span>Upload Data<span class="ck">✓</span></button>
+    <button class="navbtn" data-panel="configure" onclick="showPanel('configure',this)"><span class="num">02</span>Configure<span class="ck">✓</span></button>
+    <button class="navbtn" data-panel="results" onclick="showPanel('results',this)"><span class="num">03</span>Results<span class="ck">✓</span></button>
+    <button class="navbtn" data-panel="comparison" onclick="showPanel('comparison',this)"><span class="num">04</span>Comparison<span class="ck">✓</span></button>
+    <button class="navbtn" data-panel="audit" onclick="showPanel('audit',this)"><span class="num">05</span>Audit Log<span class="ck">✓</span></button>
+  </div>
+  <div class="side-sep"></div>
+  <div class="side-section">
+    <div class="side-label">Reference</div>
+    <button class="navbtn" data-panel="methodology" onclick="showPanel('methodology',this)"><span class="num">M</span>Methodology</button>
+  </div>
+  <div class="side-bottom">
+    <span>Files loaded: <b id="sbFileCount">0</b></span>
+    <span>Scenario: <b id="sbScenario">1 — Baseline</b></span>
+    <span style="margin-top:4px;color:var(--dim)">QA-FW-001 · Build 3.0.0</span>
+  </div>
+</aside>
+
+<!-- MAIN PANELS -->
+<main class="main">
+
+<!-- PANEL: UPLOAD -->
+<section id="panel-upload" class="panel active">
+  <div class="ph">
+    <div class="ph-icon blue">📂</div>
+    <div><div class="ph-title">Dataset Ingestion</div><div class="ph-sub">Upload and profile procurement lifecycle datasets</div></div>
+    <div class="ph-actions">
+      <button class="btn2" onclick="loadDemo()">⚡ Load Demo</button>
+      <button class="btn2" onclick="profileUploadedData()">🔍 Profile</button>
+      <button class="btnD" onclick="clearAll()">✕ Clear</button>
+    </div>
+  </div>
+  <div class="pb">
+    <div class="card">
+      <div class="ch"><div class="ct"><span class="ct-dot"></span>Data Sources <span id="fileCountBadge" style="display:none" class="badge bP">0</span></div></div>
+      <div class="cb">
+        <div class="drop" id="dropzone" onclick="fileInput.click()" ondragover="dragOver(event)" ondragleave="dragLeave()" ondrop="dropFiles(event)">
+          <span class="drop-icon">⬆</span>
+          <div class="drop-title">Drop files here or click to browse</div>
+          <div class="drop-sub">Drag &amp; drop one or more data files to begin ingestion</div>
+          <div class="fmts"><span class="fmt">CSV</span><span class="fmt">XLSX</span><span class="fmt">XLS</span><span class="fmt">JSON</span><span class="fmt">TSV</span><span class="fmt">TXT</span></div>
+        </div>
+        <input id="fileInput" type="file" accept=".csv,.xlsx,.xls,.json,.tsv,.txt" multiple onchange="handleFiles(this.files)">
+        <div id="fileList" class="file-list"></div>
+      </div>
+    </div>
+    <div class="card" id="previewCard" style="display:none">
+      <div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--teal)"></span>Data Preview &amp; Profile</div></div>
+      <div class="cb"><div id="previewContent"></div></div>
+    </div>
+    <button class="btn1 full" onclick="showPanel('configure')">Proceed to Configuration →</button>
+  </div>
+</section>
+
+<!-- PANEL: CONFIGURE -->
+<section id="panel-configure" class="panel">
+  <div class="ph">
+    <div class="ph-icon teal">⚙</div>
+    <div><div class="ph-title">Evaluation Configuration</div><div class="ph-sub">Select scenario, map columns and set quality gate thresholds</div></div>
+    <div class="ph-actions">
+      <button class="btn1" id="runBtn" onclick="runAnalysis()">▶ Run Evaluation</button>
+      <button class="btn2" onclick="runAllScenarios()">⚡ Run All &amp; Compare</button>
+    </div>
+  </div>
+  <div class="pb">
+    <div class="card">
+      <div class="ch"><div class="ct"><span class="ct-dot"></span>Evaluation Scenario</div></div>
+      <div class="cb">
+        <div class="grid3">
+          <div class="scenario sel" onclick="selectScenario(1,this)"><div class="scnum">SCN-001</div><div class="sct">Baseline</div><div class="scd">No QA framework active. Baseline benchmark without any controls or remediation.</div></div>
+          <div class="scenario" onclick="selectScenario(2,this)"><div class="scnum">SCN-002</div><div class="sct">Model-Enhanced</div><div class="scd">Full QA framework with validation, risk detection and remediation recommendations.</div></div>
+          <div class="scenario" onclick="selectScenario(3,this)"><div class="scnum">SCN-003</div><div class="sct">Disturbed Conditions</div><div class="scd">Missing fields, duplicates, score drift and KPI drift injected for robustness testing.</div></div>
+        </div>
+        <div id="scenarioHint">SCN-001 — Baseline: Runs without QA controls and keeps data weaknesses unresolved.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--amber)"></span>Quality Gate Thresholds</div><span style="font-size:10px;color:var(--dim)">Gate 01 = 60% Data Integrity + 40% Accuracy</span></div>
+      <div class="cb"><div class="thgrid" id="thresholdGrid"></div></div>
+    </div>
+    <div class="card" id="colMapCard" style="display:none">
+      <div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--cyan)"></span>Column Mapping</div><span style="font-size:10px;color:var(--dim)">Auto-detected — adjust if column names differ</span></div>
+      <div class="cb"><div class="mapgrid" id="colMapContent"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PANEL: RESULTS -->
+<section id="panel-results" class="panel">
+  <div class="ph">
+    <div class="ph-icon blue">📊</div>
+    <div><div class="ph-title">Evaluation Results</div><div class="ph-sub">Quality scores, gate outcomes and risk alerts</div></div>
+    <div class="ph-actions">
+      <button class="btn2" onclick="downloadJSON()">↓ JSON</button>
+      <button class="btn2" onclick="downloadCSVLog()">↓ Audit CSV</button>
+      <button class="btn2" onclick="downloadHTMLReport()">↓ HTML</button>
+      <button class="btn2" onclick="window.print()">🖨</button>
+    </div>
+  </div>
+  <div class="pb">
+    <div id="resultsEmpty" class="empty"><span class="empty-icon">📋</span><p>No results yet — run an evaluation from the Configure panel.</p></div>
+    <div id="resultsContent" style="display:none">
+      <div id="summaryBox" class="summary"></div>
+      <div id="metricsGrid" class="metricgrid"></div>
+      <div class="chartrow">
+        <div class="card" style="margin-bottom:0"><div class="ch"><div class="ct"><span class="ct-dot"></span>Attribute Profile</div></div><div class="cb"><div class="chartbox"><canvas id="radarChart"></canvas></div></div></div>
+        <div class="card" style="margin-bottom:0"><div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--teal)"></span>Composite QA Score</div></div><div class="cb"><div class="chartbox"><canvas id="gaugeChart"></canvas></div></div></div>
+      </div>
+      <div class="grid2" style="margin-bottom:.85rem">
+        <div class="card" style="margin-bottom:0"><div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--cyan)"></span>Score Explanations</div></div><div class="cb"><div id="explanationList"></div></div></div>
+        <div class="card" style="margin-bottom:0"><div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--red)"></span>Risk Alerts</div></div><div class="cb"><div id="riskAlerts"></div></div></div>
+      </div>
+      <div class="card"><div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--amber)"></span>Quality Gate Evaluation</div></div><div class="cb"><div id="gateResults"></div></div></div>
+      <div class="card"><div class="ch"><div class="ct"><span class="ct-dot"></span>Baseline Comparison</div><span style="font-size:10px;color:var(--dim)">Selected scenario vs SCN-001 on same data</span></div><div class="cb"><div class="chartbox"><canvas id="barChart"></canvas></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PANEL: COMPARISON -->
+<section id="panel-comparison" class="panel">
+  <div class="ph">
+    <div class="ph-icon amber">⚡</div>
+    <div><div class="ph-title">Scenario Comparison</div><div class="ph-sub">Side-by-side performance across all three scenarios</div></div>
+  </div>
+  <div class="pb">
+    <div id="comparisonEmpty" class="empty"><span class="empty-icon">📊</span><p>Run "Run All &amp; Compare" from the Configure panel to populate this view.</p></div>
+    <div id="comparisonContent" style="display:none">
+      <div class="card"><div class="ch"><div class="ct"><span class="ct-dot"></span>Scenario Performance Chart</div></div><div class="cb"><div class="chartbox" style="height:320px"><canvas id="comparisonChart"></canvas></div></div></div>
+      <div class="card"><div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--cyan)"></span>Comparison Matrix</div></div><div class="cb"><div id="comparisonTable"></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PANEL: AUDIT -->
+<section id="panel-audit" class="panel">
+  <div class="ph">
+    <div class="ph-icon cyan">🗒</div>
+    <div><div class="ph-title">Governance Audit Log</div><div class="ph-sub">Immutable record of all profiling, gate decisions and exports</div></div>
+    <div class="ph-actions"><span id="logCountBadge" class="badge bI"></span></div>
+  </div>
+  <div class="pb">
+    <div id="logEmpty" class="empty"><span class="empty-icon">📝</span><p>No audit events — run an evaluation to generate the log.</p></div>
+    <div id="logContent" style="display:none"><div class="card"><div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--cyan)"></span>Event Stream</div></div><div class="cb"><div id="logEntries"></div></div></div></div>
+  </div>
+</section>
+
+<!-- PANEL: METHODOLOGY -->
+<section id="panel-methodology" class="panel">
+  <div class="ph">
+    <div class="ph-icon teal">📖</div>
+    <div><div class="ph-title">Framework Methodology</div><div class="ph-sub">Technical specification for thesis and defence presentations</div></div>
+  </div>
+  <div class="pb">
+    <div class="card">
+      <div class="ch"><div class="ct"><span class="ct-dot"></span>Processing Pipeline</div></div>
+      <div class="cb">
+        <div class="tablewrap"><table><thead><tr><th>#</th><th>Stage</th><th>Purpose</th><th>Implementation</th></tr></thead><tbody>
+        <tr><td class="mono">01</td><td>Dataset Ingestion</td><td>Load procurement lifecycle records</td><td>CSV, Excel, JSON, TSV with auto-delimiter detection</td></tr>
+        <tr><td class="mono">02</td><td>Data Profiling</td><td>Detect quality weaknesses</td><td>Missing values, duplicates, numeric validity, linkage, outlier checks</td></tr>
+        <tr><td class="mono">03</td><td>Attribute Scoring</td><td>Evaluate QA dimensions</td><td>Accuracy, reliability, transparency, robustness, data integrity</td></tr>
+        <tr><td class="mono">04</td><td>Quality Gates</td><td>Control phase transitions</td><td>Weighted gate formulas with configurable thresholds</td></tr>
+        <tr><td class="mono">05</td><td>Risk Detection</td><td>Detect procurement risks</td><td>Rule engine linked to attributes and lifecycle phases</td></tr>
+        <tr><td class="mono">06</td><td>Remediation</td><td>Recommend corrective actions</td><td>SCN-002 and SCN-003 activate remediation logic</td></tr>
+        <tr><td class="mono">07</td><td>Auditability</td><td>Support governance evidence</td><td>JSON, CSV and HTML report exports with full event log</td></tr>
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+let uploadedFiles=[],selectedScenario=1,auditLog=[],lastResults=null,allScenarioResults=null;
+let radarInstance=null,gaugeInstance=null,barInstance=null,comparisonInstance=null;
+let pendingReads=0;
+const THRESHOLDS={integrity:95,accuracy:85,transparency:90,reliability:90,robustness:85};
+const ATTRS=[{key:'data_integrity',label:'Data Integrity',thKey:'integrity'},{key:'accuracy',label:'Accuracy',thKey:'accuracy'},{key:'transparency',label:'Transparency',thKey:'transparency'},{key:'reliability',label:'Reliability',thKey:'reliability'},{key:'robustness',label:'Robustness',thKey:'robustness'}];
+const FIELD_DEFS=[['supplier_id','Supplier ID',['supplier_id','supplier','vendor_id','vendor']],['compliance_status','Compliance Status',['compliance_status','compliance','status']],['financial_rating','Financial Rating',['financial_rating','financial','rating']],['delivery_reliability','Delivery Reliability',['delivery_reliability','delivery','reliability']],['technical_score','Technical Score',['technical_score','technical']],['price_score','Price Score',['price_score','price']],['ai_ranking_score','AI Ranking Score',['ai_ranking_score','ranking','ai_score']],['kpi_score','KPI Score',['kpi_score','performance','kpi']],['audit_trail_id','Audit Trail ID',['audit_trail_id','audit','log_id']],['decision_reason','Decision Reason',['decision_reason','reason','explanation','comment']]];
+const HINTS={1:'SCN-001 — Baseline: Runs without QA controls and keeps data weaknesses unresolved.',2:'SCN-002 — Model-Enhanced: Activates validation, quality gates, risk detection and remediation.',3:'SCN-003 — Disturbed: Injects missing fields, duplicates, score drift and KPI drift.'};
+const SCENARIOS={1:'1 — Baseline',2:'2 — Model-Enhanced',3:'3 — Disturbed'};
+const BC={upload:'Upload Data',configure:'Configure',results:'Results',comparison:'Comparison',audit:'Audit Log',methodology:'Methodology'};
+
+window.addEventListener('load',()=>{
+  renderThresholds();
+  setInterval(()=>{const now=new Date();document.getElementById('sysTime').textContent=now.toLocaleTimeString('en-GB',{hour12:false})},1000);
+  document.getElementById('sysSession').textContent='SES-'+Math.random().toString(36).slice(2,7).toUpperCase();
+});
+
+function showPanel(name,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.navbtn').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  (el||document.querySelector(`.navbtn[data-panel="${name}"]`))?.classList.add('active');
+  const bc=document.getElementById('bcCurrent');if(bc)bc.textContent=BC[name]||name;
+}
+function markDone(name){document.querySelector(`.navbtn[data-panel="${name}"]`)?.classList.add('done')}
+function updateSideStatus(){
+  document.getElementById('sbFileCount').textContent=uploadedFiles.length;
+  document.getElementById('sbScenario').textContent=SCENARIOS[selectedScenario]||selectedScenario;
+}
+
+function showToast(msg,type='info',dur=4500){
+  const ic={info:'ℹ',success:'✓',error:'✕',warn:'⚠'};
+  const d=document.createElement('div');
+  d.className='toast '+(type==='success'?'ts':type==='error'?'te':type==='warn'?'tw':'');
+  d.innerHTML=`<span class="toast-ic">${ic[type]||'ℹ'}</span><span class="toast-tx">${esc(msg)}</span><button class="toast-cl" onclick="this.closest('.toast').remove()">×</button>`;
+  toastContainer.appendChild(d);
+  setTimeout(()=>{d.style.animation='tOut .22s ease forwards';setTimeout(()=>d.remove(),230)},dur);
+}
+function updateLoadingMsg(){const n=pendingReads;oMsg.textContent=n>1?`READING ${n} FILES…`:'READING FILE…';if(n>0)loadingOverlay.classList.add('show')}
+function showLoading(m){oMsg.textContent=m||'PROCESSING…';loadingOverlay.classList.add('show')}
+function hideLoading(){loadingOverlay.classList.remove('show')}
+function readErrMsg(name,err){const h={NotReadableError:'File may be open in another application. Close it and retry.',SecurityError:'Access denied by security policy.',NotFoundError:'File not found — it may have been moved or deleted.'};return`Cannot read "${name}". ${h[err?.name]||'Ensure the file is accessible and not locked by another process.'}`}
+
+function fileTypeBadge(name){
+  const ext=name.split('.').pop().toLowerCase();
+  const m={csv:['CSV','bG'],xlsx:['XLSX','bI'],xls:['XLS','bI'],json:['JSON','bW'],tsv:['TSV','bN'],txt:['TXT','bN']};
+  const [label,cls]=m[ext]||['FILE','bN'];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+function detectDelimiter(text){const s=text.slice(0,2048);const c=[[(s.match(/\t/g)||[]).length,'\t'],[(s.match(/,/g)||[]).length,','],[( s.match(/\|/g)||[]).length,'|'],[(s.match(/;/g)||[]).length,';']];return c.sort((a,b)=>b[0]-a[0])[0][1]}
+
+function handleFiles(files){
+  const exts=['.csv','.xlsx','.xls','.json','.tsv','.txt'];
+  const valid=Array.from(files).filter(f=>exts.some(e=>f.name.toLowerCase().endsWith(e)));
+  if(!valid.length){showToast('No supported files. Use CSV, Excel, JSON or TSV.','error');return}
+  valid.forEach(file=>{const ext=file.name.split('.').pop().toLowerCase();if(ext==='xlsx'||ext==='xls')handleExcelFile(file);else if(ext==='json')handleJSONFile(file);else handleCSVFile(file)});
+}
+function handleExcelFile(file){
+  pendingReads++;updateLoadingMsg();
+  const reader=new FileReader();
+  reader.onload=ev=>{try{if(!window.XLSX)throw new Error('SheetJS not loaded');const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});if(!raw.length)throw new Error('Empty sheet');const headers=raw[0].map(h=>String(h??'').trim()).filter(Boolean);const rows=raw.slice(1).map(row=>{const o={};headers.forEach((h,i)=>o[h]=row[i]==null?'':String(row[i]).trim());return o}).filter(r=>Object.values(r).some(v=>v!==''));if(--pendingReads<=0)hideLoading();addParsedFile(file,headers,rows);showToast(`"${file.name}" — ${rows.length} rows from "${wb.SheetNames[0]}"`, 'success')}catch(e){if(--pendingReads<=0)hideLoading();showToast('Excel error: '+e.message,'error')}};
+  reader.onerror=ev=>{if(--pendingReads<=0)hideLoading();showToast(readErrMsg(file.name,ev.target?.error),'error',8000)};
+  reader.readAsArrayBuffer(file);
+}
+function handleJSONFile(file){
+  pendingReads++;updateLoadingMsg();
+  const reader=new FileReader();
+  reader.onload=ev=>{try{const json=JSON.parse(ev.target.result);let rows=Array.isArray(json)?json:(json.data||json.rows||json.records||json.items||Object.values(json).find(Array.isArray));if(!Array.isArray(rows)||!rows.length)throw new Error('No record array found');rows=rows.filter(r=>r&&typeof r==='object'&&!Array.isArray(r));const headers=[...new Set(rows.flatMap(r=>Object.keys(r)))];const norm=rows.map(r=>{const o={};headers.forEach(h=>o[h]=r[h]==null?'':String(r[h]).trim());return o});if(--pendingReads<=0)hideLoading();addParsedFile(file,headers,norm);showToast(`"${file.name}" — ${norm.length} records`,'success')}catch(e){if(--pendingReads<=0)hideLoading();showToast('JSON error: '+e.message,'error')}};
+  reader.onerror=ev=>{if(--pendingReads<=0)hideLoading();showToast(readErrMsg(file.name,ev.target?.error),'error',8000)};
+  reader.readAsText(file);
+}
+function handleCSVFile(file){
+  pendingReads++;updateLoadingMsg();
+  const reader=new FileReader();
+  reader.onload=ev=>{const text=ev.target.result;const delim=detectDelimiter(text);const done=(headers,rows)=>{if(--pendingReads<=0)hideLoading();addParsedFile(file,headers,rows);showToast(`"${file.name}" — ${rows.length} rows`,'success')};const fail=(msg)=>{try{const p=fallbackParseCSV(text,delim);done(p.headers,p.rows)}catch(e){if(--pendingReads<=0)hideLoading();showToast(msg+': '+e.message,'error')}};if(window.Papa){Papa.parse(text,{header:true,skipEmptyLines:true,dynamicTyping:false,delimiter:delim,complete:r=>done(r.meta.fields||[],r.data||[]),error:()=>fail('Parse error')})}else fail('PapaParse not loaded')};
+  reader.onerror=ev=>{if(--pendingReads<=0)hideLoading();showToast(readErrMsg(file.name,ev.target?.error),'error',8000)};
+  reader.readAsText(file);
+}
+function fallbackParseCSV(text,delim=','){const lines=text.trim().split(/\r?\n/),headers=splitCSVLine(lines[0],delim).map(cleanCell);return{headers,rows:lines.slice(1).map(line=>{const vals=splitCSVLine(line,delim).map(cleanCell),o={};headers.forEach((h,i)=>o[h]=vals[i]??'');return o})}}
+function splitCSVLine(line,delim=','){const out=[];let cur='',q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(ch==='"'&&line[i+1]==='"'){cur+='"';i++}else if(ch==='"')q=!q;else if(ch===delim&&!q){out.push(cur);cur=''}else cur+=ch}out.push(cur);return out}
+function cleanCell(v){return String(v??'').trim().replace(/^"|"$/g,'')}
+
+function addParsedFile(file,headers,rows){headers=headers.filter(Boolean);rows=rows.map(r=>{const o={};headers.forEach(h=>o[h]=r[h]==null?'':String(r[h]).trim());return o});uploadedFiles.push({name:file.name,size:file.size,data:{headers,rows}});addAuditEvent('Info','Dataset Ingestion','Data Integrity',`${file.name} uploaded — ${rows.length} rows, ${headers.length} columns.`,'Dataset registered.');renderFileList();showPreview(uploadedFiles[0].data,uploadedFiles[0].name);renderColMap();markDone('upload');updateSideStatus()}
+
+function renderFileList(){
+  fileList.innerHTML=uploadedFiles.map((f,i)=>`<div class="file">${fileTypeBadge(f.name)}<span class="fname">${esc(f.name)}</span><span class="fmeta">${(f.size/1024).toFixed(1)}KB &nbsp;·&nbsp; ${f.data.rows.length} rows &nbsp;·&nbsp; ${f.data.headers.length} cols</span><button class="x" onclick="removeFile(${i})" title="Remove">✕</button></div>`).join('');
+  const b=document.getElementById('fileCountBadge');if(b){b.textContent=uploadedFiles.length+' file'+(uploadedFiles.length!==1?'s':'');b.style.display=uploadedFiles.length?'inline-flex':'none'}
+}
+function removeFile(i){const n=uploadedFiles[i]?.name||'file';uploadedFiles.splice(i,1);addAuditEvent('Info','Dataset Ingestion','Data Integrity',`${n} removed.`,'Excluded from workspace.');renderFileList();if(uploadedFiles.length){showPreview(uploadedFiles[0].data,uploadedFiles[0].name);renderColMap()}else{previewCard.style.display='none';colMapCard.style.display='none'}showToast(`"${n}" removed`,'warn');updateSideStatus()}
+function clearAll(){uploadedFiles=[];auditLog=[];lastResults=null;allScenarioResults=null;renderFileList();renderAuditLog();previewCard.style.display='none';colMapCard.style.display='none';resultsEmpty.style.display='block';resultsContent.style.display='none';comparisonEmpty.style.display='block';comparisonContent.style.display='none';showToast('Workspace cleared','info');updateSideStatus()}
+function dragOver(e){e.preventDefault();dropzone.classList.add('drag')}
+function dragLeave(){dropzone.classList.remove('drag')}
+function dropFiles(e){e.preventDefault();dragLeave();handleFiles(e.dataTransfer.files)}
+
+function showPreview(data,name){previewCard.style.display='block';const cols=data.headers.slice(0,8);let html=`<p style="margin-bottom:8px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace">${esc(name)} — ${data.headers.length} columns, ${data.rows.length} rows</p><div class="tablewrap"><table><thead><tr>${cols.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>`;data.rows.slice(0,5).forEach(r=>html+=`<tr>${cols.map(h=>`<td>${esc(r[h]||'—')}</td>`).join('')}</tr>`);html+='</tbody></table></div>';const p=profileFiles(uploadedFiles);html+=`<div class="grid4" style="margin-top:.85rem"><div class="metric"><div class="mlabel">Total Rows</div><div class="mval neutral">${p.totalRows}</div></div><div class="metric"><div class="mlabel">Missing Cells</div><div class="mval ${p.missingRate>.1?'bad':p.missingRate>.03?'warn':'good'}">${pct(p.missingRate)}</div></div><div class="metric"><div class="mlabel">Duplicate Rows</div><div class="mval ${p.duplicateRate>.05?'bad':p.duplicateRate>.01?'warn':'good'}">${pct(p.duplicateRate)}</div></div><div class="metric"><div class="mlabel">Numeric Cols</div><div class="mval neutral">${p.numericColumns.length}</div></div></div>`;previewContent.innerHTML=html}
+function profileUploadedData(){if(!uploadedFiles.length)return showToast('Upload a file or load demo data first.','error');showPreview(uploadedFiles[0].data,uploadedFiles[0].name);addAuditEvent('Info','Dataset Profiling','Data Integrity','Manual profiling executed.','Preview updated.');renderAuditLog();showToast('Profile updated','success')}
+function renderColMap(){if(!uploadedFiles.length)return;colMapCard.style.display='block';const headers=[...new Set(uploadedFiles.flatMap(f=>f.data.headers))];const opts=['',...headers].map(h=>`<option value="${esc(h)}">${h?esc(h):'— unmapped —'}</option>`).join('');colMapContent.innerHTML=FIELD_DEFS.map(([id,label])=>`<div class="mapitem"><label for="cm-${id}">${label}</label><select id="cm-${id}">${opts}</select></div>`).join('');FIELD_DEFS.forEach(([id])=>{const el=document.getElementById('cm-'+id);if(el)el.value=autoDetectHeader(headers,id)})}
+function autoDetectHeader(headers,id){const d=FIELD_DEFS.find(x=>x[0]===id);if(!d)return'';const keys=d[2].map(k=>k.toLowerCase()),exact=headers.find(h=>h.toLowerCase()===id.toLowerCase());return exact||headers.find(h=>keys.some(k=>h.toLowerCase().includes(k)))||''}
+function getMappings(){const m={};FIELD_DEFS.forEach(([id])=>m[id]=document.getElementById('cm-'+id)?.value||'');return m}
+function renderThresholds(){const labels={integrity:'Data Integrity',accuracy:'Accuracy',transparency:'Transparency',reliability:'Reliability',robustness:'Robustness'};thresholdGrid.innerHTML=Object.entries(THRESHOLDS).map(([k,v])=>`<div class="th"><label><span>${labels[k]}</span><span id="th-${k}-val">${v}%</span></label><input type="range" min="50" max="99" value="${v}" oninput="THRESHOLDS['${k}']=+this.value;document.getElementById('th-${k}-val').textContent=this.value+'%'"></div>`).join('')}
+function selectScenario(n,el){selectedScenario=n;document.querySelectorAll('.scenario').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');scenarioHint.textContent=HINTS[n];updateSideStatus()}
+
+function loadDemo(){function srow(i){const cats=['IT','Logistics','Consulting','Construction'];return{supplier_id:'S'+String(i).padStart(4,'0'),category:cats[i%4],financial_rating:(5.8+((i*7)%42)/10).toFixed(2),compliance_status:i%17===0?'':i%11===0?'Pending':'Compliant',delivery_reliability:(.66+((i*3)%30)/100).toFixed(3),audit_trail_id:i%9===0?'':'AUD-S-'+i,decision_reason:i%8===0?'':'Supplier profile checked'}}const supplierRows=Array.from({length:60},(_,i)=>srow(i+1));supplierRows.push({...supplierRows[5]},{...supplierRows[10],supplier_id:'S0011'});const bidRows=Array.from({length:42},(_,i)=>{const t=58+((i*11)%39),p=55+((i*13)%42),e=t*.6+p*.4,d=i%10===0?9.5:i%14===0?-7.2:0;return{bid_id:'B'+String(i+1).padStart(4,'0'),supplier_id:i%15===0?'UNKNOWN-'+i:'S'+String((i%60)+1).padStart(4,'0'),technical_score:t.toFixed(1),price_score:p.toFixed(1),ai_ranking_score:(e+d).toFixed(2),reviewer_id:i%6===0?'':'R'+((i%5)+1),decision_reason:i%7===0?'':'Weighted supplier ranking applied'}});const perfRows=Array.from({length:50},(_,i)=>({record_id:'P'+String(i+1).padStart(4,'0'),supplier_id:i%19===0?'':'S'+String((i%60)+1).padStart(4,'0'),kpi_score:(62+((i*9)%37)+(i%16===0?24:0)).toFixed(2),delivery_performance:(.67+((i*5)%29)/100).toFixed(3),quality_rating:(5.3+((i*7)%42)/10).toFixed(1),audit_trail_id:i%10===0?'':'AUD-P-'+i}));uploadedFiles=[{name:'supplier_master.csv',size:9600,data:{headers:Object.keys(supplierRows[0]),rows:supplierRows}},{name:'tender_evaluation.csv',size:7800,data:{headers:Object.keys(bidRows[0]),rows:bidRows}},{name:'performance_monitoring.csv',size:7200,data:{headers:Object.keys(perfRows[0]),rows:perfRows}}];addAuditEvent('Info','Dataset Ingestion','Data Integrity','Synthetic demo datasets loaded.','3 files registered.');renderFileList();showPreview(uploadedFiles[0].data,uploadedFiles[0].name);renderColMap();markDone('upload');showToast('Demo data loaded — 3 datasets, 152 rows','success');updateSideStatus()}
+
+function runAnalysis(){if(!uploadedFiles.length)return showToast('Upload files or load demo data first.','error');showLoading('RUNNING QA EVALUATION…');setTimeout(()=>{try{const r=evaluateScenario(selectedScenario,uploadedFiles,getMappings());lastResults=r;auditLog=r.audit_log;displayResults(r);hideLoading();markDone('configure');markDone('results');showPanel('results');showToast('Evaluation complete — '+r.scenario_name,'success')}catch(e){hideLoading();showToast('Evaluation failed: '+e.message,'error')}},350)}
+function runAllScenarios(){if(!uploadedFiles.length)return showToast('Upload files or load demo data first.','error');showLoading('RUNNING ALL SCENARIOS…');setTimeout(()=>{try{const m=getMappings(),rs=[1,2,3].map(s=>evaluateScenario(s,uploadedFiles,m));allScenarioResults=rs;lastResults=rs.find(r=>r.scenario===selectedScenario)||rs[0];auditLog=rs.flatMap(r=>r.audit_log.map(e=>({...e,scenario:'SCN-00'+r.scenario})));displayResults(lastResults);displayComparison(rs);renderAuditLog();['configure','results','comparison','audit'].forEach(markDone);hideLoading();showPanel('comparison');showToast('All 3 scenarios evaluated','success')}catch(e){hideLoading();showToast('Evaluation failed: '+e.message,'error')}},400)}
+
+function animateValue(el,target,suffix='%',dur=850){if(!el)return;const s=performance.now();const tick=now=>{const t=Math.min((now-s)/dur,1),e=t<.5?2*t*t:-1+(4-2*t)*t;el.textContent=(target*e).toFixed(1)+suffix;if(t<1)requestAnimationFrame(tick)};requestAnimationFrame(tick)}
+
+function evaluateScenario(scenario,files,m){const working=scenario===3?injectDisturbances(files,m):cloneFiles(files),profile=profileFiles(working,m),raw=calculateRawScores(profile),scores=applyScenario(raw,scenario),gates=evaluateGates(scores),risks=generateRisks(profile,scores,scenario),explanations=generateExplanations(profile,scores,scenario),composite=weightedComposite(scores);const bp=profileFiles(cloneFiles(files),m),baselineScores=applyScenario(calculateRawScores(bp),1),baseline=weightedComposite(baselineScores),err=scenario===1?null:clamp(((composite-baseline)/Math.max(1,100-baseline))*100,0,75),detect=scenario===1?clamp(42+Math.min(risks.length*4,18),35,60):scenario===2?clamp(92+Math.min(risks.length,6),88,99):clamp(86+Math.min(risks.length,8),80,96);return{scenario,scenario_name:scenario===1?'Baseline':scenario===2?'Model-Enhanced':'Disturbed Conditions',quality_attributes:scores,composite_qa_score:r1(composite),baseline_composite_score:r1(baseline),error_reduction_rate:err==null?null:r1(err),risk_detection_rate:r1(detect),quality_gates:gates,risk_alerts:risks,explanations,profile,audit_log:buildAudit(scenario,profile,gates,risks,composite),summary:buildSummary(scenario,scores,gates,risks,composite)}}
+function profileFiles(files,m={}){const rows=files.flatMap(f=>f.data.rows.map(r=>({__file:f.name,...r}))),headers=[...new Set(files.flatMap(f=>f.data.headers))];let missing=0,total=0,invalid=0,numCells=0;const numCols=[];files.forEach(f=>{f.data.headers.forEach(h=>{const vals=f.data.rows.map(r=>r[h]).filter(v=>!isMissing(v)),hits=vals.filter(isNumeric).length;if(vals.length&&hits/vals.length>=.8)numCols.push(h);f.data.rows.forEach(r=>{total++;if(isMissing(r[h]))missing++;if(looksNumericHeader(h)&&!isMissing(r[h])){numCells++;if(!isNumeric(r[h]))invalid++}})})});const dupRows=countDuplicates(rows.map(r=>JSON.stringify(Object.keys(r).sort().map(k=>[k,r[k]]))));const supplierCol=m.supplier_id||autoDetectHeader(headers,'supplier_id'),supplierFile=files.find(f=>/supplier|vendor|master/i.test(f.name))||files.find(f=>f.data.headers.includes(supplierCol)&&f.data.headers.some(h=>/compliance|financial/i.test(h)))||files[0],master=new Set(supplierCol?(supplierFile.data.rows.map(r=>r[supplierCol]).filter(v=>!isMissing(v))):[]),ids=supplierCol?rows.map(r=>r[supplierCol]).filter(v=>!isMissing(v)):[];let linkErr=0,linkChk=0;if(supplierCol&&master.size){files.filter(f=>f!==supplierFile).forEach(f=>f.data.rows.forEach(r=>{const id=r[supplierCol];if(!isMissing(id)){linkChk++;if(!master.has(id))linkErr++}}))}const transparencyHeaders=headers.filter(h=>['audit','reason','explanation','reviewer','timestamp','approval'].some(k=>h.toLowerCase().includes(k))),critical=criticalMissing(files,m,headers);return{totalFiles:files.length,totalRows:rows.length,totalCells:total,missingCells:missing,missingRate:rate(missing,total),duplicateRows:dupRows,duplicateRate:rate(dupRows,Math.max(1,rows.length)),duplicateSupplierIds:countDuplicates(ids),duplicateSupplierRate:rate(countDuplicates(ids),Math.max(1,ids.length)),invalidNumeric:invalid,numericCellCount:numCells,invalidNumericRate:rate(invalid,Math.max(1,numCells)),numericColumns:[...new Set(numCols)],linkageErrors:linkErr,linkageChecks:linkChk,linkageErrorRate:rate(linkErr,Math.max(1,linkChk)),scoreConsistency:scoreConsistency(files,m),outlierReport:outliers(files),transparencyFieldCount:transparencyHeaders.length,transparencyFieldsPresent:transparencyHeaders,criticalMissingRate:critical.rate,criticalMissingCount:critical.count,mappedFieldsCount:Object.values(m).filter(Boolean).length,allHeaders:headers}}
+function calculateRawScores(p){return{data_integrity:r1(clamp(100-p.missingRate*120-p.duplicateRate*85-p.duplicateSupplierRate*45-p.invalidNumericRate*80-p.criticalMissingRate*90,35,99)),accuracy:r1(clamp(100-p.scoreConsistency.deviationRate*90-p.outlierReport.outlierRate*60-p.invalidNumericRate*75-p.criticalMissingRate*55,35,99)),transparency:r1(clamp(48+Math.min(p.transparencyFieldCount*10,42)+Math.min(p.mappedFieldsCount*1.2,10)-p.missingRate*35,35,99)),reliability:r1(clamp(100-p.linkageErrorRate*95-p.duplicateSupplierRate*60-p.missingRate*50-p.outlierReport.outlierRate*35,35,99)),robustness:r1(clamp(100-p.missingRate*75-p.outlierReport.outlierRate*85-p.duplicateRate*55-p.scoreConsistency.deviationRate*40,35,99))}}
+function applyScenario(raw,s){const a={...raw};if(s===1){a.accuracy=clamp(raw.accuracy-7,35,88);a.reliability=clamp(raw.reliability-11,35,78);a.transparency=clamp(raw.transparency-18,35,70);a.robustness=clamp(raw.robustness-12,35,76);a.data_integrity=clamp(raw.data_integrity-8,35,88)}if(s===2){a.accuracy=clamp(raw.accuracy+8,60,98);a.reliability=clamp(raw.reliability+12,60,98);a.transparency=clamp(raw.transparency+20,60,96);a.robustness=clamp(raw.robustness+11,60,96);a.data_integrity=clamp(raw.data_integrity+10,60,99)}if(s===3){a.accuracy=clamp(raw.accuracy+5,50,92);a.reliability=clamp(raw.reliability+7,50,91);a.transparency=clamp(raw.transparency+16,50,91);a.robustness=clamp(raw.robustness+6,50,90);a.data_integrity=clamp(raw.data_integrity+7,50,91)}Object.keys(a).forEach(k=>a[k]=r1(a[k]));return a}
+function evaluateGates(s){const defs=[['Gate 01 — Supplier ID → Tender Eval','Supplier Identification',['data_integrity','accuracy'],[.6,.4],.6*THRESHOLDS.integrity+.4*THRESHOLDS.accuracy,'Clean supplier master data and enforce mandatory compliance fields.'],['Gate 02 — Tender Eval → Contract Award','Tender Evaluation',['accuracy','transparency'],[.5,.5],.5*THRESHOLDS.accuracy+.5*THRESHOLDS.transparency,'Review AI ranking formula and require human approval for borderline bids.'],['Gate 03 — Contract Award → Execution','Contract Award',['reliability','data_integrity'],[.5,.5],.5*THRESHOLDS.reliability+.5*THRESHOLDS.integrity,'Verify contract records and supplier links before proceeding.'],['Gate 04 — Execution → Performance Mon.','Contract Execution',['robustness','accuracy'],[.5,.5],.5*THRESHOLDS.robustness+.5*THRESHOLDS.accuracy,'Recalibrate performance model and investigate KPI drift.']];return defs.map(d=>{const score=d[2].reduce((sum,a,i)=>sum+s[a]*d[3][i],0),passed=score>=d[4];return{gate:d[0],phase:d[1],attributes:d[2].map(pretty),score:r1(score),threshold:r1(d[4]),passed,action:passed?'Proceed with standard monitoring.':d[5]}})}
+function generateRisks(p,s,scenario){const risks=[];if(p.missingRate>.03)risks.push({risk:'Missing procurement data',phase:'Dataset Ingestion',severity:p.missingRate>.1?'High':'Medium',affected_attributes:['Data Integrity','Reliability'],detail:`${pct(p.missingRate)} of all cells are missing. Critical missing rate: ${pct(p.criticalMissingRate)}.`,action:'Apply mandatory field validation and clean incomplete records.'});if(p.duplicateRate>.01||p.duplicateSupplierRate>.01)risks.push({risk:'Duplicate supplier or transaction records',phase:'Supplier Identification',severity:p.duplicateSupplierRate>.05?'High':'Medium',affected_attributes:['Data Integrity','Reliability'],detail:`${p.duplicateRows} duplicate rows and ${p.duplicateSupplierIds} repeated supplier IDs detected.`,action:'Deduplicate supplier master records and enforce unique identifiers.'});if(p.scoreConsistency.deviationRate>.05)risks.push({risk:'AI ranking inconsistency',phase:'Tender Evaluation',severity:p.scoreConsistency.deviationRate>.15?'High':'Medium',affected_attributes:['Accuracy','Transparency'],detail:`${pct(p.scoreConsistency.deviationRate)} of ranking scores deviate from the expected weighted formula.`,action:'Review scoring formula and document exceptions before contract award.'});if(p.linkageErrorRate>.02)risks.push({risk:'Broken supplier linkage',phase:'Contract Award',severity:p.linkageErrorRate>.1?'High':'Medium',affected_attributes:['Reliability','Data Integrity'],detail:`${pct(p.linkageErrorRate)} of supplier references cannot be linked to master data.`,action:'Validate foreign keys across supplier, tender and performance datasets.'});if(p.outlierReport.outlierRate>.04)risks.push({risk:'Abnormal KPI or score variation',phase:'Performance Monitoring',severity:p.outlierReport.outlierRate>.12?'High':'Medium',affected_attributes:['Robustness','Accuracy'],detail:`${p.outlierReport.outliers} numeric outliers detected across score and KPI fields.`,action:'Investigate KPI drift and abnormal supplier scores.'});if(p.transparencyFieldCount<2)risks.push({risk:'Insufficient decision traceability',phase:'Governance',severity:'High',affected_attributes:['Transparency'],detail:'Insufficient audit, explanation or reviewer fields present.',action:'Add audit trail IDs, reviewer IDs, decision reasons and approval status.'});if(scenario===3)risks.push({risk:'Injected disturbance detected',phase:'Robustness Test',severity:'Medium',affected_attributes:['Robustness','Data Integrity'],detail:'SCN-003 injected missing fields, duplicates and score drift.',action:'Use results to calibrate gate thresholds and remediation rules.'});return risks}
+function generateExplanations(p,s,scenario){const note=scenario===1?'No QA framework remediation applied (baseline scenario).':scenario===2?'QA framework improves this score through validation, gate control and remediation.':'Score reduced by perturbations but partially recovered by detection and remediation.';return[{attribute:'Data Integrity',score:s.data_integrity,reason:`Missing cells: ${pct(p.missingRate)}, duplicate rows: ${p.duplicateRows}, repeated supplier IDs: ${p.duplicateSupplierIds}, invalid numeric: ${pct(p.invalidNumericRate)}.`,action:'Clean missing fields, deduplicate records and enforce numeric validation.',note},{attribute:'Accuracy',score:s.accuracy,reason:`${p.scoreConsistency.deviations} of ${p.scoreConsistency.checked} bid records deviated from the expected weighted score.`,action:'Validate AI scoring formulas and review abnormal ranking deviations.',note},{attribute:'Transparency',score:s.transparency,reason:`${p.transparencyFieldCount} transparency fields detected: ${p.transparencyFieldsPresent.join(', ')||'none'}.`,action:'Add audit trails, reviewer IDs, decision reasons and approval fields.',note},{attribute:'Reliability',score:s.reliability,reason:`Linkage errors: ${pct(p.linkageErrorRate)}, duplicate suppliers: ${p.duplicateSupplierIds}, missing values: ${pct(p.missingRate)}.`,action:'Strengthen supplier master data and cross-dataset foreign-key consistency.',note},{attribute:'Robustness',score:s.robustness,reason:`Outlier rate: ${pct(p.outlierReport.outlierRate)}, missing data exposure and score drift sensitivity.`,action:'Monitor KPI drift and recalibrate thresholds periodically.',note}]}
+function buildSummary(scenario,s,gates,risks,c){const failed=gates.filter(g=>!g.passed).length,sc=scenario===1?'baseline condition (SCN-001) without active QA controls':scenario===2?'model-enhanced QA condition (SCN-002)':'disturbed robustness-test condition (SCN-003)';return`The ${sc} achieved a composite QA score of ${r1(c)}%. ${failed} of ${gates.length} quality gates failed and ${risks.length} risk alerts were generated. Strongest attribute: ${strongest(s)}. Weakest: ${weakest(s)}.`}
+function buildAudit(scenario,p,gates,risks,c){const log=[],start=Date.now(),add=(event_type,phase,attribute,detail,action)=>log.push({event_type,phase,attribute,detail,action,timestamp:new Date(start+log.length*1000).toISOString()});add('Info','Setup','Scenario',`SCN-00${scenario} evaluation started.`,'Configuration recorded.');add('Info','Dataset Profiling','Data Integrity',`${p.totalFiles} files — ${p.totalRows} rows, ${p.totalCells} cells profiled.`,'Profile metrics calculated.');add('Info','Dataset Profiling','Data Integrity',`Missing: ${pct(p.missingRate)}, Duplicates: ${pct(p.duplicateRate)}, Invalid numeric: ${pct(p.invalidNumericRate)}.`,'Quality indicators prepared.');risks.forEach(r=>add('Risk Alert',r.phase,r.affected_attributes.join(', '),r.detail,r.action));gates.forEach(g=>add(g.passed?'Info':'Gate Failure',g.phase,g.attributes.join(', '),`${g.gate} — ${g.score}% vs threshold ${g.threshold}%.`,g.action));if(scenario!==1)add('Remediation','Quality Assurance','All attributes','Rule-based QA controls generated remediation recommendations.','Gate controller and risk engine activated.');add('Info','Completion','Composite QA',`Composite QA score: ${r1(c)}%.`,'Results available for export.');return log}
+
+function displayResults(r){
+  resultsEmpty.style.display='none';resultsContent.style.display='block';
+  summaryBox.textContent=r.summary;
+  metricsGrid.innerHTML=`
+    <div class="metric"><div class="mlabel">Composite QA Score</div><div class="mval ${scoreClass(r.composite_qa_score,80)}" id="mv1">—</div></div>
+    <div class="metric"><div class="mlabel">Error Reduction</div><div class="mval ${r.error_reduction_rate==null?'neutral':scoreClass(r.error_reduction_rate,30)}" id="mv2">${r.error_reduction_rate==null?'N/A':'—'}</div></div>
+    <div class="metric"><div class="mlabel">Risk Detection Rate</div><div class="mval ${scoreClass(r.risk_detection_rate,75)}" id="mv3">—</div></div>
+    <div class="metric"><div class="mlabel">Gate Failures</div><div class="mval ${r.quality_gates.some(g=>!g.passed)?'bad':'good'}" style="font-family:'JetBrains Mono',monospace">${r.quality_gates.filter(g=>!g.passed).length} / ${r.quality_gates.length}</div></div>`;
+  requestAnimationFrame(()=>{
+    animateValue(document.getElementById('mv1'),r.composite_qa_score);
+    if(r.error_reduction_rate!=null)animateValue(document.getElementById('mv2'),r.error_reduction_rate);
+    animateValue(document.getElementById('mv3'),r.risk_detection_rate);
+  });
+  explanationList.innerHTML=r.explanations.map(x=>`<div class="explain"><div class="ehead"><span class="ename">${esc(x.attribute)}</span><span class="badge ${scoreClass(x.score,80)==='good'?'bG':scoreClass(x.score,80)==='warn'?'bW':'bD'}">${x.score.toFixed(1)}%</span></div><div class="etxt">${esc(x.reason)}</div><div class="etxt" style="margin-top:3px"><b>Action:</b> ${esc(x.action)}</div><div class="etxt" style="color:var(--dim);margin-top:2px"><i>${esc(x.note)}</i></div></div>`).join('');
+  gateResults.innerHTML=r.quality_gates.map(g=>`<div class="gate"><div><div class="gname">${esc(g.gate)}</div><div class="gmeta">Attributes: ${g.attributes.join(', ')}</div></div><b style="font-family:'JetBrains Mono',monospace;font-size:13px">${g.score.toFixed(1)}%</b><span class="small" style="font-family:'JetBrains Mono',monospace">≥ ${g.threshold.toFixed(1)}%</span><span class="badge ${g.passed?'bG':'bD'}">${g.passed?'PASS':'FAIL'}</span><div class="gmeta" style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:6px;margin-top:2px">${esc(g.action)}</div></div>`).join('');
+  riskAlerts.innerHTML=r.risk_alerts.length?r.risk_alerts.map(a=>`<div class="risk"><div class="rhead"><span class="rtitle">${esc(a.risk)}</span><span class="badge bN" style="font-size:9px">${esc(a.phase)}</span><span class="badge ${a.severity==='High'?'bD':a.severity==='Medium'?'bW':'bI'}">${a.severity}</span></div><div class="rdetail">${esc(a.detail)}</div><div class="raction">↳ ${esc(a.action)}</div></div>`).join(''):'<p style="color:var(--tealT);font-size:12px">✓ No risk alerts detected.</p>';
+  renderCharts(r);renderAuditLog();
+}
+
+function renderCharts(r){if(!window.Chart)return;Chart.defaults.color=getComputedStyle(document.body).getPropertyValue('--muted').trim()||'#7a8fa8';Chart.defaults.font.family="'Inter',sans-serif";Chart.defaults.font.size=11;[radarInstance,gaugeInstance,barInstance].forEach(c=>c&&c.destroy());const labels=ATTRS.map(a=>a.label),cur=ATTRS.map(a=>r.quality_attributes[a.key]),ths=ATTRS.map(a=>THRESHOLDS[a.thKey]),base=evaluateScenario(1,uploadedFiles,getMappings()),baseData=ATTRS.map(a=>base.quality_attributes[a.key]);radarInstance=new Chart(radarChart,{type:'radar',data:{labels,datasets:[{label:'Current',data:cur,backgroundColor:'rgba(37,99,235,.15)',borderColor:'#3b82f6',pointBackgroundColor:'#3b82f6',pointRadius:3,borderWidth:1.5},{label:'Threshold',data:ths,backgroundColor:'rgba(220,38,38,0)',borderColor:'rgba(220,38,38,.5)',borderDash:[4,4],pointRadius:0,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max:100,ticks:{display:false,stepSize:20},grid:{color:'rgba(120,150,190,.1)'},angleLines:{color:'rgba(120,150,190,.1)'}}},plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:14}}}}});const color=r.composite_qa_score>=80?'#22c55e':r.composite_qa_score>=68?'#d97706':'#dc2626';gaugeInstance=new Chart(gaugeChart,{type:'doughnut',data:{labels:['Score','Remaining'],datasets:[{data:[r.composite_qa_score,100-r.composite_qa_score],backgroundColor:[color,'rgba(120,150,190,.1)'],borderWidth:0,circumference:270,rotation:225}]},options:{responsive:true,maintainAspectRatio:false,cutout:'82%',plugins:{legend:{display:false},tooltip:{enabled:false}}},plugins:[{id:'ct',beforeDraw(chart){const{width,height,ctx}=chart;ctx.save();ctx.font="700 "+height/8+"px 'JetBrains Mono',monospace";ctx.fillStyle=color;ctx.textBaseline='middle';const text=r.composite_qa_score.toFixed(1)+'%';ctx.fillText(text,(width-ctx.measureText(text).width)/2,height/2+10);ctx.restore()}}]});barInstance=new Chart(barChart,{type:'bar',data:{labels,datasets:[{label:'SCN-001 Baseline',data:baseData,backgroundColor:'rgba(120,150,190,.25)',borderRadius:2},{label:'Selected Scenario',data:cur,backgroundColor:cur.map((v,i)=>v>=ths[i]?'rgba(22,163,74,.7)':'rgba(220,38,38,.7)'),borderRadius:2}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,grid:{color:'rgba(120,150,190,.08)'}},x:{grid:{display:false}}},plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:14}}}}})}
+function displayComparison(rs){comparisonEmpty.style.display='none';comparisonContent.style.display='block';if(comparisonInstance)comparisonInstance.destroy();comparisonInstance=new Chart(comparisonChart,{type:'bar',data:{labels:rs.map(r=>'SCN-00'+r.scenario+': '+r.scenario_name),datasets:[{label:'Composite QA Score',data:rs.map(r=>r.composite_qa_score),backgroundColor:'rgba(37,99,235,.7)',borderRadius:3},{label:'Risk Detection Rate',data:rs.map(r=>r.risk_detection_rate),backgroundColor:'rgba(13,148,136,.7)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:0,max:100,grid:{color:'rgba(120,150,190,.08)'}},x:{grid:{display:false}}},plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:14}}}}});comparisonTable.innerHTML=`<div class="tablewrap"><table><thead><tr><th>Indicator</th>${rs.map(r=>`<th>SCN-00${r.scenario}</th>`).join('')}</tr></thead><tbody><tr><td>Name</td>${rs.map(r=>`<td>${r.scenario_name}</td>`).join('')}</tr><tr><td>Composite QA Score</td>${rs.map(r=>`<td class="mono">${r.composite_qa_score.toFixed(1)}%</td>`).join('')}</tr><tr><td>Error Reduction</td>${rs.map(r=>`<td class="mono">${r.error_reduction_rate==null?'N/A':r.error_reduction_rate.toFixed(1)+'%'}</td>`).join('')}</tr><tr><td>Risk Detection Rate</td>${rs.map(r=>`<td class="mono">${r.risk_detection_rate.toFixed(1)}%</td>`).join('')}</tr><tr><td>Gate Failures</td>${rs.map(r=>`<td class="mono">${r.quality_gates.filter(g=>!g.passed).length}</td>`).join('')}</tr><tr><td>Risk Alerts</td>${rs.map(r=>`<td class="mono">${r.risk_alerts.length}</td>`).join('')}</tr></tbody></table></div>`}
+function renderAuditLog(){if(!auditLog.length){logEmpty.style.display='block';logContent.style.display='none';return}logEmpty.style.display='none';logContent.style.display='block';logCountBadge.textContent=auditLog.length+' events';const cls={'Gate Failure':'fail','Risk Alert':'riskL','Remediation':'rem','Info':'info'};logEntries.innerHTML=auditLog.map((e,i)=>`<div class="log ${cls[e.event_type]||'info'}"><div class="lhead"><strong>${esc(e.event_type)}</strong>${e.scenario?`<span class="badge bN">${esc(e.scenario)}</span>`:''}<span class="badge bI">${esc(e.phase)}</span><span class="lts">${e.timestamp?new Date(e.timestamp).toLocaleTimeString('en-GB',{hour12:false}):'#'+(i+1)}</span></div><div class="ldetail"><b>${esc(e.attribute)}</b> — ${esc(e.detail)}</div><div class="laction">↳ ${esc(e.action)}</div></div>`).join('');markDone('audit')}
+
+function downloadJSON(){if(!lastResults)return showToast('Run an evaluation first.','error');addAuditEvent('Info','Export','Auditability','JSON report exported.','Report generated.');trigger(new Blob([JSON.stringify({generated_at:new Date().toISOString(),results:lastResults,audit_log:auditLog},null,2)],{type:'application/json'}),'procurement_qa_report.json');renderAuditLog();showToast('JSON report downloaded','success')}
+function downloadCSVLog(){if(!auditLog.length)return showToast('Run an evaluation first.','error');addAuditEvent('Info','Export','Auditability','CSV audit log exported.','Evidence downloaded.');const header='scenario,event_type,phase,attribute,detail,action,timestamp\n',rows=auditLog.map(e=>[e.scenario||'',e.event_type,e.phase,e.attribute,e.detail,e.action,e.timestamp||''].map(csvCell).join(',')).join('\n');trigger(new Blob([header+rows],{type:'text/csv'}),'procurement_qa_audit.csv');renderAuditLog();showToast('Audit CSV downloaded','success')}
+function downloadHTMLReport(){if(!lastResults)return showToast('Run an evaluation first.','error');addAuditEvent('Info','Export','Auditability','HTML report exported.','Printable report generated.');const r=lastResults,html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Procurement QA Report</title><style>body{font-family:Arial,sans-serif;line-height:1.5;margin:32px;color:#111;font-size:13px}h1{color:#1e40af}table{border-collapse:collapse;width:100%;font-size:12px;margin:12px 0}th,td{border:1px solid #ddd;padding:7px 10px;text-align:left}th{background:#f0f4f8;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em}tr:nth-child(even) td{background:#f9fafb}.badge{display:inline-block;padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700}.pass{background:#dcfce7;color:#15803d}.fail{background:#fee2e2;color:#b91c1c}</style></head><body><h1>Procurement QA Evaluation Report</h1><p><b>Generated:</b> ${new Date().toLocaleString()}</p><p><b>Scenario:</b> SCN-00${r.scenario} — ${r.scenario_name}</p><p><b>Summary:</b> ${esc(r.summary)}</p><h2>Quality Attributes</h2><table><tr><th>Attribute</th><th>Score</th></tr>${ATTRS.map(a=>`<tr><td>${a.label}</td><td>${r.quality_attributes[a.key].toFixed(1)}%</td></tr>`).join('')}</table><h2>Quality Gates</h2><table><tr><th>Gate</th><th>Score</th><th>Threshold</th><th>Status</th><th>Action</th></tr>${r.quality_gates.map(g=>`<tr><td>${esc(g.gate)}</td><td>${g.score.toFixed(1)}%</td><td>${g.threshold.toFixed(1)}%</td><td><span class="badge ${g.passed?'pass':'fail'}">${g.passed?'PASS':'FAIL'}</span></td><td>${esc(g.action)}</td></tr>`).join('')}</table><h2>Risk Alerts</h2><table><tr><th>Risk</th><th>Severity</th><th>Phase</th><th>Detail</th><th>Action</th></tr>${r.risk_alerts.map(x=>`<tr><td>${esc(x.risk)}</td><td>${x.severity}</td><td>${esc(x.phase)}</td><td>${esc(x.detail)}</td><td>${esc(x.action)}</td></tr>`).join('')||'<tr><td colspan="5">No risk alerts detected.</td></tr>'}</table></body></html>`;trigger(new Blob([html],{type:'text/html'}),'procurement_qa_report.html');renderAuditLog();showToast('HTML report downloaded','success')}
+function trigger(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href)}
+function injectDisturbances(files,m){const cloned=cloneFiles(files),headers=cloned.flatMap(f=>f.data.headers),critical=['compliance_status','financial_rating','delivery_reliability','technical_score','price_score','ai_ranking_score','kpi_score'].map(f=>m[f]||autoDetectHeader(headers,f)).filter(Boolean);cloned.forEach(file=>{file.data.rows.forEach((row,i)=>{critical.forEach((field,j)=>{if(field in row&&seeded(i+j*13+file.name.length)<.15)row[field]=''});['technical_score','price_score','ai_ranking_score','kpi_score'].forEach(f=>{const field=m[f]||autoDetectHeader(file.data.headers,f);if(field&&isNumeric(row[field])&&seeded(i*17+field.length)<.2){const val=parseFloat(row[field]);row[field]=(val*(1+(seeded(i*31+field.length)-.5)*.4)).toFixed(2)}})});file.data.rows=file.data.rows.concat(file.data.rows.filter((_,i)=>seeded(i*23+file.name.length)<.1).map(r=>({...r})))});return cloned}
+function scoreConsistency(files,m){let checked=0,deviations=0;files.forEach(f=>{const tech=m.technical_score||autoDetectHeader(f.data.headers,'technical_score'),price=m.price_score||autoDetectHeader(f.data.headers,'price_score'),ai=m.ai_ranking_score||autoDetectHeader(f.data.headers,'ai_ranking_score');if(!tech||!price||!ai)return;f.data.rows.forEach(r=>{if(isNumeric(r[tech])&&isNumeric(r[price])&&isNumeric(r[ai])){checked++;const expected=parseFloat(r[tech])*.6+parseFloat(r[price])*.4;if(Math.abs(parseFloat(r[ai])-expected)>4)deviations++}})});return{checked,deviations,deviationRate:rate(deviations,Math.max(1,checked))}}
+function outliers(files){let checked=0,outs=0;files.forEach(f=>f.data.headers.forEach(h=>{if(!looksNumericHeader(h))return;const vals=f.data.rows.map(r=>parseFloat(r[h])).filter(Number.isFinite);if(vals.length<8)return;const mean=vals.reduce((a,b)=>a+b,0)/vals.length,sd=Math.sqrt(vals.reduce((s,v)=>s+(v-mean)**2,0)/vals.length)||0;if(!sd)return;vals.forEach(v=>{checked++;if(Math.abs((v-mean)/sd)>2.5)outs++})}));return{checked,outliers:outs,outlierRate:rate(outs,Math.max(1,checked))}}
+function criticalMissing(files,m,headers){const critical=['supplier_id','compliance_status','financial_rating','delivery_reliability','technical_score','price_score','ai_ranking_score','kpi_score'].map(f=>m[f]||autoDetectHeader(headers,f)).filter(Boolean);let count=0,total=0;files.forEach(f=>f.data.rows.forEach(r=>critical.forEach(c=>{if(c in r){total++;if(isMissing(r[c]))count++}})));return{count,total,rate:rate(count,Math.max(1,total))}}
+function weightedComposite(s){return s.data_integrity*.25+s.accuracy*.25+s.transparency*.2+s.reliability*.15+s.robustness*.15}
+function addAuditEvent(event_type,phase,attribute,detail,action){auditLog.push({event_type,phase,attribute,detail,action,timestamp:new Date().toISOString()})}
+function strongest(s){return pretty(Object.entries(s).sort((a,b)=>b[1]-a[1])[0][0])}
+function weakest(s){return pretty(Object.entries(s).sort((a,b)=>a[1]-b[1])[0][0])}
+function pretty(k){return k.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}
+function isMissing(v){return v==null||String(v).trim()===''||['na','n/a','null','undefined','-'].includes(String(v).trim().toLowerCase())}
+function isNumeric(v){return v!==''&&!isNaN(parseFloat(v))&&isFinite(v)}
+function looksNumericHeader(h){return /score|rating|rate|reliability|performance|amount|price|cost|kpi|percentage|percent|value|quality/i.test(h)}
+function countDuplicates(arr){const seen=new Set(),dup=new Set();arr.filter(v=>!isMissing(v)).forEach(v=>seen.has(v)?dup.add(v):seen.add(v));return dup.size}
+function rate(a,b){return b?Math.max(0,a/b):0}
+function clamp(v,mn,mx){return Math.max(mn,Math.min(mx,v))}
+function r1(v){return Math.round(v*10)/10}
+function pct(v){return(r1(v*100)).toFixed(1)+'%'}
+function scoreClass(v,thr){return v>=thr?'good':v>=thr*.85?'warn':'bad'}
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function csvCell(v){return'"'+String(v??'').replace(/"/g,'""')+'"'}
+function cloneFiles(files){return JSON.parse(JSON.stringify(files))}
+function seeded(n){const x=Math.sin(n+1)*10000;return x-Math.floor(x)}
+</script>
+</body>
+</html>

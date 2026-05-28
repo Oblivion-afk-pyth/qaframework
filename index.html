@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Quality Assurance Framework — Procurement Quality Framework</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="toastContainer" aria-live="polite"></div>
+<div id="loadingOverlay" class="overlay"><div class="bspin"></div><div id="oMsg" aria-live="assertive">PROCESSING…</div></div>
+
+<!-- Modal for Explain Risk Alert -->
+<div id="explainModal" class="modal-container">
+  <div class="modal-bg" onclick="app.closeModal()"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Risk Alert Explanation</div>
+      <button class="modal-close" onclick="app.closeModal()" aria-label="Close modal">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn2" onclick="app.closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- SYSTEM BAR -->
+<div class="sysbar">
+  <div class="sysbar-left">
+    <span class="sys-dot"></span>
+    <span>System Online</span>
+    <span class="sys-sep"></span>
+    <span>Module: <b>QA-FW-001</b></span>
+    <span class="sys-sep"></span>
+    <span id="sysTime"></span>
+  </div>
+  <div class="sysbar-right">
+    <span>Quality Assurance Framework</span>
+    <span class="sys-sep"></span>
+    <b>v3.0.0</b>
+    <span class="sys-sep"></span>
+    <span>Session: <b id="sysSession"></b></span>
+    <span class="sys-sep"></span>
+    <button class="btn-sm btn2" onclick="app.toggleTheme()" id="themeToggleBtn" aria-label="Toggle Light/Dark Mode">☀ Light Mode</button>
+  </div>
+</div>
+
+<!-- TOP NAV -->
+<nav class="top">
+  <div class="brand">
+    <div class="logo">QA</div>
+    <div class="brand-stack">
+      <span class="brand-name">QA Framework</span>
+      <span class="brand-sub">Quality Assurance Platform</span>
+    </div>
+  </div>
+  <div class="top-div"></div>
+  <div class="breadcrumb">
+    <span>Home</span><span class="bc-sep">›</span>
+    <span>Quality Assurance</span><span class="bc-sep">›</span>
+    <span class="bc-cur" id="bcCurrent">Dashboard</span>
+  </div>
+  <div class="top-right">
+    <div class="top-badge">AI-Enhanced</div>
+    <div class="user-chip">
+      <div class="user-av">U</div>
+      <span>Analyst</span>
+    </div>
+  </div>
+</nav>
+
+<div class="layout">
+<!-- SIDEBAR -->
+<aside class="side">
+  <div class="side-section">
+    <div class="side-label">Workflow</div>
+    <button class="navbtn active" data-panel="dashboard" onclick="app.showPanel('dashboard',this)"><span class="num">00</span>Dashboard<span class="ck">✓</span></button>
+    <button class="navbtn" data-panel="upload" onclick="app.showPanel('upload',this)"><span class="num">01</span>Upload Data<span class="ck">✓</span></button>
+    <button class="navbtn" data-panel="configure" onclick="app.showPanel('configure',this)"><span class="num">02</span>Configure<span class="ck">✓</span></button>
+    <button class="navbtn" data-panel="results" onclick="app.showPanel('results',this)"><span class="num">03</span>Results<span class="ck">✓</span></button>
+    <button class="navbtn" data-panel="comparison" onclick="app.showPanel('comparison',this)"><span class="num">04</span>Comparison<span class="ck">✓</span></button>
+    <button class="navbtn" data-panel="sensitivity" onclick="app.showPanel('sensitivity',this)"><span class="num">05</span>Sensitivity Analysis<span class="ck">✓</span></button>
+    <button class="navbtn" data-panel="audit" onclick="app.showPanel('audit',this)"><span class="num">06</span>Audit Log<span class="ck">✓</span></button>
+  </div>
+  <div class="side-sep"></div>
+  <div class="side-section">
+    <div class="side-label">Reference</div>
+    <button class="navbtn" data-panel="methodology" onclick="app.showPanel('methodology',this)"><span class="num">M</span>Methodology</button>
+  </div>
+  <div class="side-bottom">
+    <div style="margin-bottom: 6px; width: 100%; height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden;">
+      <div id="workflowProgress" style="width: 15%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+    </div>
+    <span>Files loaded: <b id="sbFileCount">0</b></span>
+    <span>Scenario: <b id="sbScenario">1 — Baseline</b></span>
+    <span style="margin-top:4px;color:var(--dim)">QA-FW-001 · Build 3.0.0</span>
+  </div>
+</aside>
+
+<!-- MAIN PANELS -->
+<main class="main">
+
+<!-- PANEL: DASHBOARD -->
+<section id="panel-dashboard" class="panel active">
+  <div class="ph">
+    <div class="ph-icon blue">🏠</div>
+    <div><div class="ph-title">Dashboard Overview</div><div class="ph-sub">Welcome to Quality Assurance Framework</div></div>
+  </div>
+  <div class="pb">
+    <div class="card">
+      <div class="cb" style="text-align: center; padding: 3rem 1rem;">
+        <h1 style="font-size: 24px; margin-bottom: 12px;">Quality Assurance Framework</h1>
+        <p class="helper" style="font-size: 14px; max-width: 600px; margin: 0 auto 24px;">An academically defensible, AI-enhanced evaluation platform for assessing procurement data quality, detecting risks, and ensuring governance.</p>
+        <div class="btnrow" style="justify-content: center; gap: 12px;">
+          <button class="btn1" onclick="app.showPanel('upload')">Start New Evaluation →</button>
+          <button class="btn2" onclick="app.loadDemo()">Load Demo Data</button>
+          <button class="btn2" onclick="app.downloadTemplate()">↓ Download Template</button>
+        </div>
+      </div>
+    </div>
+    <div class="grid3">
+      <div class="card">
+        <div class="ch"><div class="ct"><span class="ct-dot"></span>Getting Started</div></div>
+        <div class="cb">
+          <ol style="padding-left: 20px; font-size: 12px; color: var(--muted); line-height: 1.8;">
+            <li><b>Upload Data:</b> Provide supplier, tender, or KPI data in CSV/Excel.</li>
+            <li><b>Configure Model:</b> Adjust scenario, weights, and thresholds.</li>
+            <li><b>Analyze Results:</b> Review composite scores, gate failures, and AI risk alerts.</li>
+            <li><b>Generate Reports:</b> Export comprehensive Word or PDF reports.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--teal)"></span>Current Workspace</div></div>
+        <div class="cb">
+          <div class="metricgrid" style="grid-template-columns: 1fr; gap: 8px; margin-bottom: 0;">
+            <div class="metric" style="padding: 8px 12px;"><div class="mlabel">Loaded Files</div><div class="mval neutral" id="dashFiles">0</div></div>
+            <div class="metric" style="padding: 8px 12px;"><div class="mlabel">Last Composite Score</div><div class="mval neutral" id="dashScore">—</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--amber)"></span>System Modules</div></div>
+        <div class="cb">
+          <ul style="list-style: none; padding: 0; font-size: 12px; color: var(--muted); line-height: 1.8;">
+            <li>✓ Core QA Scoring</li>
+            <li>✓ Record-Level Validation</li>
+            <li>✓ Sensitivity Analysis</li>
+            <li>✓ Configurable Disturbances</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PANEL: UPLOAD -->
+<section id="panel-upload" class="panel">
+  <div class="ph">
+    <div class="ph-icon blue">📂</div>
+    <div><div class="ph-title">Dataset Ingestion</div><div class="ph-sub">Upload and profile procurement lifecycle datasets</div></div>
+    <div class="ph-actions">
+      <button class="btn2" onclick="app.loadDemo()">⚡ Load Demo</button>
+      <button class="btn2" onclick="app.profileUploadedData()">🔍 Profile</button>
+      <button class="btnD" onclick="app.confirmClearAll()">✕ Clear</button>
+    </div>
+  </div>
+  <div class="pb">
+    <div class="notice">Files with more than 10,000 rows may take longer to process in the browser.</div>
+    <div class="card">
+      <div class="ch"><div class="ct"><span class="ct-dot"></span>Data Sources <span id="fileCountBadge" style="display:none" class="badge bP">0</span></div></div>
+      <div class="cb">
+        <div class="drop" id="dropzone" onclick="fileInput.click()" ondragover="app.dragOver(event)" ondragleave="app.dragLeave()" ondrop="app.dropFiles(event)">
+          <span class="drop-icon">⬆</span>
+          <div class="drop-title">Drop files here or click to browse</div>
+          <div class="drop-sub">Drag &amp; drop one or more data files to begin ingestion</div>
+          <div class="fmts"><span class="fmt">CSV</span><span class="fmt">XLSX</span><span class="fmt">XLS</span><span class="fmt">JSON</span><span class="fmt">TSV</span><span class="fmt">TXT</span></div>
+          <div class="privacy-note">🔒 Files are processed locally in your browser in this prototype. No data is uploaded to a server.</div>
+        </div>
+        <input id="fileInput" type="file" accept=".csv,.xlsx,.xls,.json,.tsv,.txt" multiple onchange="app.handleFiles(this.files)">
+        <div id="fileList" class="file-list"></div>
+      </div>
+    </div>
+    <div class="card" id="previewCard" style="display:none">
+      <div class="ch">
+        <div class="ct"><span class="ct-dot" style="background:var(--teal)"></span>Data Preview &amp; Profile</div>
+        <div id="previewTabs" style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;"></div>
+      </div>
+      <div class="cb"><div id="previewContent"></div></div>
+    </div>
+    <button class="btn1 full" onclick="app.showPanel('configure')">Proceed to Configuration →</button>
+  </div>
+</section>
+
+<!-- PANEL: CONFIGURE -->
+<section id="panel-configure" class="panel">
+  <div class="ph">
+    <div class="ph-icon teal">⚙</div>
+    <div><div class="ph-title">Evaluation Configuration</div><div class="ph-sub">Select scenario, set weights, gates, and map columns</div></div>
+    <div class="ph-actions">
+      <button class="btn1" id="runBtn" onclick="app.runAnalysis()">▶ Run Evaluation</button>
+      <button class="btn2" id="runAllBtn" onclick="app.runAllScenarios()">⚡ Run All &amp; Compare</button>
+    </div>
+  </div>
+  <div class="pb">
+    <div class="card">
+      <div class="ch"><div class="ct"><span class="ct-dot"></span>Evaluation Scenario</div></div>
+      <div class="cb">
+        <div class="grid3">
+          <div class="scenario sel" onclick="app.selectScenario(1,this)"><div class="scnum">SCN-001</div><div class="sct">Baseline</div><div class="scd">No QA framework active. Baseline benchmark without any controls or remediation.</div></div>
+          <div class="scenario" onclick="app.selectScenario(2,this)"><div class="scnum">SCN-002</div><div class="sct">Model-Enhanced</div><div class="scd">Full QA framework with validation, risk detection and remediation recommendations.</div></div>
+          <div class="scenario" onclick="app.selectScenario(3,this)"><div class="scnum">SCN-003</div><div class="sct">Disturbed Conditions</div><div class="scd">Test robustness by injecting synthetic errors based on configured intensities.</div></div>
+        </div>
+        <div id="scenarioHint">SCN-001 — Baseline: Runs without QA controls and keeps data weaknesses unresolved.</div>
+        
+        <!-- Disturbance Controls (visible only for SCN-003) -->
+        <div id="disturbanceControls" style="display:none; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+          <h3 style="font-size: 11px; color: var(--text); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">Disturbance Intensities (SCN-003)</h3>
+          <div class="grid3">
+            <div class="slider-container">
+              <label class="th"><span style="color:var(--muted)">Missing Data Injection</span><span id="dist-missing-val">15%</span></label>
+              <input type="range" id="dist-missing" min="0" max="50" value="15" oninput="document.getElementById('dist-missing-val').textContent=this.value+'%'">
+            </div>
+            <div class="slider-container">
+              <label class="th"><span style="color:var(--muted)">Duplicate Injection</span><span id="dist-dupes-val">10%</span></label>
+              <input type="range" id="dist-dupes" min="0" max="30" value="10" oninput="document.getElementById('dist-dupes-val').textContent=this.value+'%'">
+            </div>
+            <div class="slider-container">
+              <label class="th"><span style="color:var(--muted)">Score/KPI Drift</span><span id="dist-drift-val">20%</span></label>
+              <input type="range" id="dist-drift" min="0" max="50" value="20" oninput="document.getElementById('dist-drift-val').textContent=this.value+'%'">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="grid2">
+      <!-- Thresholds -->
+      <div class="card" style="margin-bottom:0">
+        <div class="ch">
+          <div class="ct">
+            <span class="ct-dot" style="background:var(--amber)"></span>Quality Gate Thresholds
+            <div class="tooltip-wrapper">
+              <span class="tooltip-icon">?</span>
+              <span class="tooltip-content">Minimum scores required for an attribute to pass the quality gate and advance to the next procurement phase.</span>
+            </div>
+          </div>
+          <button class="btn-sm btn2" onclick="app.resetThresholds()">Reset</button>
+        </div>
+        <div class="cb"><div class="thgrid" id="thresholdGrid" style="grid-template-columns: 1fr;"></div></div>
+      </div>
+
+      <!-- Weights -->
+      <div class="card" style="margin-bottom:0">
+        <div class="ch">
+          <div class="ct">
+            <span class="ct-dot" style="background:var(--accentT)"></span>Composite Score Weights
+            <div class="tooltip-wrapper">
+              <span class="tooltip-icon">?</span>
+              <span class="tooltip-content">Determines how much each attribute contributes to the final Composite QA Score. Total must exactly equal 100%.</span>
+            </div>
+          </div>
+          <button class="btn-sm btn2" onclick="app.resetWeights()">Reset</button>
+        </div>
+        <div class="cb">
+          <div class="control-row">
+            <span style="font-size:10px; color:var(--muted);">TOTAL WEIGHT (Must equal 100%)</span>
+            <span id="weightTotalBadge" class="weight-total valid">100%</span>
+          </div>
+          <div class="thgrid" id="weightsGrid" style="grid-template-columns: 1fr;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="colMapCard" style="display:none; margin-top: .85rem;">
+      <div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--cyan)"></span>Column Mapping</div><span style="font-size:10px;color:var(--dim)">Auto-detected — adjust if column names differ</span></div>
+      <div class="cb"><div class="mapgrid" id="colMapContent"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PANEL: RESULTS -->
+<section id="panel-results" class="panel">
+  <div class="ph">
+    <div class="ph-icon blue">📊</div>
+    <div><div class="ph-title">Evaluation Results</div><div class="ph-sub">Quality scores, record issues, gate outcomes and risk alerts</div></div>
+    <div class="ph-actions">
+      <button class="btn2" onclick="app.downloadJSON()">↓ JSON</button>
+      <button class="btn2" onclick="app.downloadCSVLog()">↓ Audit CSV</button>
+      <button class="btn2" onclick="app.downloadReport('html')">↓ HTML Report</button>
+      <button class="btn2" onclick="app.downloadReport('doc')">↓ Word Report</button>
+      <button class="btn2" onclick="window.print()">🖨 Print PDF</button>
+    </div>
+  </div>
+  <div class="pb">
+    <div id="resultsEmpty" class="empty"><span class="empty-icon">📋</span><p>No results yet — run an evaluation from the Configure panel.</p></div>
+    <div id="resultsContent" style="display:none">
+      <div id="summaryBox" class="summary"></div>
+      
+      <!-- Summary Metrics -->
+      <div id="metricsGrid" class="metricgrid"></div>
+      
+      <!-- Charts -->
+      <div class="chartrow">
+        <div class="card" style="margin-bottom:0"><div class="ch"><div class="ct"><span class="ct-dot"></span>Attribute Profile</div></div><div class="cb"><div class="chartbox"><canvas id="radarChart"></canvas></div></div></div>
+        <div class="card" style="margin-bottom:0"><div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--teal)"></span>Composite QA Score</div></div><div class="cb"><div class="chartbox"><canvas id="gaugeChart"></canvas></div></div></div>
+      </div>
+      
+      <!-- Record Level Issues (NEW) -->
+      <div class="card">
+        <div class="ch">
+          <div class="ct"><span class="ct-dot" style="background:var(--red)"></span>Record Level Validation Issues</div>
+          <span class="badge bD" id="recordIssuesBadge">0</span>
+        </div>
+        <div class="cb">
+          <div class="table-filter-row">
+            <input type="text" id="issueSearch" class="input-text table-search" placeholder="Search supplier ID, issue..." oninput="app.filterRecordIssues()">
+            <select id="issueSeverityFilter" class="input-text table-filter" onchange="app.filterRecordIssues()">
+              <option value="all">All Severities</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+          <div class="tablewrap" style="max-height: 250px; overflow-y: auto;">
+            <table id="recordIssuesTable">
+              <thead><tr><th>Severity</th><th>Type</th><th>Dataset</th><th>Row</th><th>Supplier ID</th><th>Field</th><th>Problem</th></tr></thead>
+              <tbody id="recordIssuesBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-bottom:.85rem">
+        <!-- Score Breakdown (NEW) -->
+        <div class="card" style="margin-bottom:0">
+          <div class="ch">
+            <div class="ct">
+              <span class="ct-dot" style="background:var(--cyan)"></span>Score Breakdown
+              <div class="tooltip-wrapper">
+                <span class="tooltip-icon">?</span>
+                <span class="tooltip-content">Detailed transparency into how each attribute score was calculated via penalties and adjustments.</span>
+              </div>
+            </div>
+          </div>
+          <div class="cb" style="padding: 0;">
+            <div class="tablewrap" style="border:none; border-radius: 0;">
+              <table id="scoreBreakdownTable">
+                <thead><tr><th>Attribute</th><th>Start</th><th>Penalties</th><th>Final</th></tr></thead>
+                <tbody id="scoreBreakdownBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Risk Alerts (Enhanced) -->
+        <div class="card" style="margin-bottom:0">
+          <div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--red)"></span>AI Risk Alerts</div></div>
+          <div class="cb"><div id="riskAlerts"></div></div>
+        </div>
+      </div>
+      
+      <div class="card"><div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--amber)"></span>Quality Gate Evaluation</div></div><div class="cb"><div id="gateResults"></div></div></div>
+      
+      <!-- Disturbance Summary (Visible only if SCN-003) -->
+      <div class="card" id="disturbanceSummaryCard" style="display:none;">
+        <div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--amberT)"></span>Disturbance Injection Summary (SCN-003)</div></div>
+        <div class="cb"><div id="disturbanceSummaryContent"></div></div>
+      </div>
+
+      <div class="card"><div class="ch"><div class="ct"><span class="ct-dot"></span>Baseline Comparison</div><span style="font-size:10px;color:var(--dim)">Selected scenario vs SCN-001 on same data</span></div><div class="cb"><div class="chartbox"><canvas id="barChart"></canvas></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PANEL: COMPARISON -->
+<section id="panel-comparison" class="panel">
+  <div class="ph">
+    <div class="ph-icon amber">⚡</div>
+    <div><div class="ph-title">Scenario Comparison</div><div class="ph-sub">Side-by-side performance across all three scenarios</div></div>
+  </div>
+  <div class="pb">
+    <div id="comparisonEmpty" class="empty"><span class="empty-icon">📊</span><p>Run "Run All &amp; Compare" from the Configure panel to populate this view.</p></div>
+    <div id="comparisonContent" style="display:none">
+      <div class="card"><div class="ch"><div class="ct"><span class="ct-dot"></span>Scenario Performance Chart</div></div><div class="cb"><div class="chartbox" style="height:320px"><canvas id="comparisonChart"></canvas></div></div></div>
+      <div class="card"><div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--cyan)"></span>Comparison Matrix</div></div><div class="cb"><div id="comparisonTable"></div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PANEL: SENSITIVITY (NEW) -->
+<section id="panel-sensitivity" class="panel">
+  <div class="ph">
+    <div class="ph-icon teal">📈</div>
+    <div><div class="ph-title">Sensitivity Analysis</div><div class="ph-sub">Test model stability against weight and threshold variations</div></div>
+    <div class="ph-actions">
+      <button class="btn1" onclick="app.runSensitivityAnalysis()">▶ Run Analysis</button>
+    </div>
+  </div>
+  <div class="pb">
+    <div id="sensitivityEmpty" class="empty"><span class="empty-icon">📈</span><p>Click "Run Analysis" to generate the sensitivity matrix based on the current scenario.</p></div>
+    <div id="sensitivityContent" style="display:none">
+      <div class="notice">This analysis recalculates the current scenario under different threshold and weight assumptions to test the robustness of the QA model decisions.</div>
+      
+      <div class="chartrow">
+        <div class="card" style="margin-bottom:0">
+          <div class="ch"><div class="ct"><span class="ct-dot"></span>Score Variation Chart</div></div>
+          <div class="cb"><div class="chartbox"><canvas id="sensitivityChart"></canvas></div></div>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--amber)"></span>Gate Stability Summary</div></div>
+          <div class="cb" id="gateStabilitySummary" style="font-size: 12px;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--teal)"></span>Sensitivity Matrix</div></div>
+        <div class="cb">
+          <div class="tablewrap">
+            <table id="sensitivityTable">
+              <thead><tr><th>Test Case</th><th>Composite Score</th><th>Gate Failures</th><th>Risk Alerts</th><th>Main Impact</th><th>Interpretation</th></tr></thead>
+              <tbody id="sensitivityBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PANEL: AUDIT -->
+<section id="panel-audit" class="panel">
+  <div class="ph">
+    <div class="ph-icon cyan">🗒</div>
+    <div><div class="ph-title">Governance Audit Log</div><div class="ph-sub">Immutable record of all profiling, gate decisions and exports</div></div>
+    <div class="ph-actions"><span id="logCountBadge" class="badge bI"></span></div>
+  </div>
+  <div class="pb">
+    <div class="table-filter-row">
+      <input type="text" id="auditSearch" class="input-text table-search" placeholder="Search event ID, detail..." oninput="app.filterAuditLog()">
+      <select id="auditTypeFilter" class="input-text table-filter" onchange="app.filterAuditLog()">
+        <option value="all">All Events</option>
+        <option value="Info">Info</option>
+        <option value="Risk Alert">Risk Alert</option>
+        <option value="Gate Failure">Gate Failure</option>
+        <option value="Remediation">Remediation</option>
+        <option value="Config Change">Config Change</option>
+      </select>
+    </div>
+    <div id="logEmpty" class="empty"><span class="empty-icon">📝</span><p>No audit events — run an evaluation to generate the log.</p></div>
+    <div id="logContent" style="display:none"><div class="card"><div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--cyan)"></span>Event Stream</div></div><div class="cb"><div id="logEntries"></div></div></div></div>
+  </div>
+</section>
+
+<!-- PANEL: METHODOLOGY -->
+<section id="panel-methodology" class="panel">
+  <div class="ph">
+    <div class="ph-icon teal">📖</div>
+    <div><div class="ph-title">Framework Methodology &amp; Extension Modules</div><div class="ph-sub">Technical specification, formulas, and potential capabilities</div></div>
+  </div>
+  <div class="pb">
+    
+    <div class="card">
+      <div class="ch"><div class="ct"><span class="ct-dot"></span>Model Formulas (Transparency)</div></div>
+      <div class="cb" style="font-size: 12px; line-height: 1.6; color: var(--text);">
+        <h3>Quality Attribute Scoring</h3>
+        <p>The core attributes are evaluated out of 100%, calculated as a base score of 100 minus specific, weighted penalties discovered during profiling.</p>
+        <ul style="margin-left: 20px; margin-bottom: 16px; color: var(--muted);">
+          <li><b>Data Integrity:</b> <code>100 - (MissingRate × 120) - (DuplicateRowRate × 85) - (InvalidNumericRate × 80)</code></li>
+          <li><b>Accuracy:</b> <code>100 - (ScoreDeviationRate × 90) - (OutlierRate × 60)</code></li>
+          <li><b>Transparency:</b> <code>48 + (TransparencyFieldCount × 10) - (MissingRate × 35)</code></li>
+          <li><b>Reliability:</b> <code>100 - (LinkageErrorRate × 95) - (DuplicateSupplierRate × 60)</code></li>
+          <li><b>Robustness:</b> <code>100 - (MissingRate × 75) - (OutlierRate × 85)</code></li>
+        </ul>
+
+        <h3>Composite QA Score</h3>
+        <p>A weighted sum of the five quality attributes based on user-defined configurations (default distribution below):</p>
+        <p class="mono" style="margin-left: 20px; margin-bottom: 16px; color: var(--accentT);">QA_Comp = (Integrity × w1) + (Accuracy × w2) + (Transparency × w3) + (Reliability × w4) + (Robustness × w5)</p>
+
+        <h3>Quality Gate Control</h3>
+        <p>Hard limits applied at transitional phases (e.g., Tender → Award). If the weighted score of specific attributes falls below the configured threshold, the gate fails and the process is halted pending remediation.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--amber)"></span>Potential Future Extension Modules</div></div>
+      <div class="cb" style="font-size: 12px; line-height: 1.6;">
+        <p class="helper">The following modules represent the enterprise roadmap and can be integrated with this core QA framework using the current architectural pattern.</p>
+        <div class="grid2">
+          <ul style="list-style-type: none; padding-left: 10px; color: var(--muted);">
+            <li><span style="color:var(--tealT)">■</span> <b>Supplier Quality Module:</b> Continuous scoring of supplier financial and operational health.</li>
+            <li><span style="color:var(--tealT)">■</span> <b>Tender Evaluation QA:</b> Deep analysis of AI bid ranking fairness.</li>
+            <li><span style="color:var(--tealT)">■</span> <b>Contract Award Validation:</b> Compliance-check gating before award finalization.</li>
+            <li><span style="color:var(--tealT)">■</span> <b>Compliance Monitoring:</b> Automated checking against regulatory blacklists.</li>
+            <li><span style="color:var(--tealT)">■</span> <b>KPI Drift Detection:</b> Time-series analysis of performance drops.</li>
+          </ul>
+          <ul style="list-style-type: none; padding-left: 10px; color: var(--muted);">
+            <li><span style="color:var(--tealT)">■</span> <b>Supplier Risk Scoring:</b> Aggregated risk index per supplier across domains.</li>
+            <li><span style="color:var(--tealT)">■</span> <b>Procurement Fraud Red Flags:</b> Behavioral analysis for cartel or duplicate bidding.</li>
+            <li><span style="color:var(--tealT)">■</span> <b>ESG & Circular Procurement:</b> Sustainability tracking against supplier records.</li>
+            <li><span style="color:var(--tealT)">■</span> <b>Cost Performance Comparison:</b> Baseline vs actual executed costs.</li>
+            <li><span style="color:var(--tealT)">■</span> <b>Contract Execution Monitoring:</b> SLAs and delivery milestone tracking.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><div class="ct"><span class="ct-dot" style="background:var(--cyan)"></span>Processing Pipeline</div></div>
+      <div class="cb">
+        <div class="tablewrap"><table><thead><tr><th>#</th><th>Stage</th><th>Purpose</th><th>Implementation</th></tr></thead><tbody>
+        <tr><td class="mono">01</td><td>Dataset Ingestion</td><td>Load procurement records</td><td>CSV, Excel, JSON locally parsed</td></tr>
+        <tr><td class="mono">02</td><td>Data Validation</td><td>Detect record-level issues</td><td>Typing, uniqueness, boundary checks</td></tr>
+        <tr><td class="mono">03</td><td>Attribute Scoring</td><td>Evaluate QA dimensions</td><td>Weighted penalty application formulas</td></tr>
+        <tr><td class="mono">04</td><td>Quality Gates</td><td>Control phase transitions</td><td>Configurable threshold enforcement</td></tr>
+        <tr><td class="mono">05</td><td>Risk Detection</td><td>Identify procurement risks</td><td>Rule engine with confidence scoring</td></tr>
+        <tr><td class="mono">06</td><td>Sensitivity Check</td><td>Test model robustness</td><td>+/- parameter variation testing</td></tr>
+        <tr><td class="mono">07</td><td>Auditability</td><td>Governance reporting</td><td>Immutable event log & PDF/Word export</td></tr>
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- Load Scripts -->
+<script src="dataProcessing.js"></script>
+<script src="scoringModel.js"></script>
+<script src="reportExport.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
