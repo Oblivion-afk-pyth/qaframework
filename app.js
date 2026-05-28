@@ -11,7 +11,7 @@ const AppState = {
   allScenarioResults: null,
   
   THRESHOLDS: { integrity: 95, accuracy: 85, transparency: 90, reliability: 90, robustness: 85 },
-  WEIGHTS: { integrity: 25, accuracy: 25, transparency: 20, reliability: 15, robustness: 15 },
+  WEIGHTS: { integrity: 20, accuracy: 20, transparency: 20, reliability: 20, robustness: 20 },
   
   ATTRS: [
     { key: 'data_integrity', label: 'Data Integrity', thKey: 'integrity' },
@@ -342,7 +342,7 @@ const app = {
   },
 
   resetWeights: function() {
-    AppState.WEIGHTS = { integrity: 25, accuracy: 25, transparency: 20, reliability: 15, robustness: 15 };
+    AppState.WEIGHTS = { integrity: 20, accuracy: 20, transparency: 20, reliability: 20, robustness: 20 };
     this.renderWeights();
     this.showToast('Weights reset to defaults', 'info');
   },
@@ -394,6 +394,15 @@ const app = {
         decision_reason: i % 7 === 0 ? '' : 'Weighted supplier ranking applied'
       };
     });
+
+    const contractRows = Array.from({ length: 36 }, (_, i) => ({
+      contract_id: 'C' + String(i + 1).padStart(4, '0'),
+      supplier_id: 'S' + String((i % 60) + 1).padStart(4, '0'),
+      contract_value: (40000 + ((i * 9137) % 90000)).toFixed(2),
+      execution_status: i % 9 === 0 ? 'Delayed' : 'On Track',
+      audit_trail_id: i % 8 === 0 ? '' : 'AUD-C-' + i
+    }));
+    contractRows.push({ ...contractRows[4] });
     
     const perfRows = Array.from({ length: 50 }, (_, i) => ({
       record_id: 'P' + String(i + 1).padStart(4, '0'),
@@ -407,15 +416,16 @@ const app = {
     AppState.uploadedFiles = [
       { name: 'supplier_master.csv', size: 9600, data: { headers: Object.keys(supplierRows[0]), rows: supplierRows } },
       { name: 'tender_evaluation.csv', size: 7800, data: { headers: Object.keys(bidRows[0]), rows: bidRows } },
+      { name: 'contract_execution.csv', size: 6400, data: { headers: Object.keys(contractRows[0]), rows: contractRows } },
       { name: 'performance_monitoring.csv', size: 7200, data: { headers: Object.keys(perfRows[0]), rows: perfRows } }
     ];
     
-    ScoringModel.addAuditEvent('Info', 'Dataset Ingestion', 'Data Integrity', 'Synthetic demo datasets loaded.', '3 files registered.');
+    ScoringModel.addAuditEvent('Info', 'Dataset Ingestion', 'Data Integrity', 'Synthetic demo datasets loaded.', '4 files registered.');
     this.renderFileList();
     this.showPreview(AppState.uploadedFiles[0].data, AppState.uploadedFiles[0].name, 0);
     this.renderColMap();
     this.markDone('upload');
-    this.showToast('Demo data loaded — 3 datasets, 152 rows', 'success');
+    this.showToast('Demo data loaded — 4 datasets, 189 rows', 'success');
     this.updateSideStatus();
     
     if(document.getElementById('panel-dashboard').classList.contains('active')) {
@@ -777,6 +787,7 @@ const app = {
           <tbody>
             <tr><td>Name</td>${rs.map(r => `<td>${r.scenario_name}</td>`).join('')}</tr>
             <tr><td>Composite QA Score</td>${rs.map(r => `<td class="mono">${r.composite_qa_score.toFixed(1)}%</td>`).join('')}</tr>
+            <tr><td>Decision Error Rate</td>${rs.map(r => `<td class="mono">${r.decision_error_rate == null ? 'N/A' : r.decision_error_rate.toFixed(1) + '%'}</td>`).join('')}</tr>
             <tr><td>Error Reduction</td>${rs.map(r => `<td class="mono">${r.error_reduction_rate == null ? 'N/A' : r.error_reduction_rate.toFixed(1) + '%'}</td>`).join('')}</tr>
             <tr><td>Risk Detection Rate</td>${rs.map(r => `<td class="mono">${r.risk_detection_rate.toFixed(1)}%</td>`).join('')}</tr>
             <tr><td>Gate Failures</td>${rs.map(r => `<td class="mono">${r.quality_gates.filter(g => !g.passed).length}</td>`).join('')}</tr>
