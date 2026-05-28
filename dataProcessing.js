@@ -401,50 +401,173 @@ const DataProcessor = {
     return { count, total, rate: this.rate(count, Math.max(1, total)) };
   },
 
+  // Browser equivalent of Appendix Code 2: validate_dataset(...)
+  validateDataset: function(file, datasetName, rules) {
+    const cleaned = this.cloneFiles([file])[0];
+    const rows = cleaned?.data?.rows || [];
+    const headers = cleaned?.data?.headers || [];
+    const issues = [];
+    const escalations = [];
+
+    (rules.required_columns || []).forEach(col => {
+      if (!headers.includes(col)) return;
+      const missingRows = rows.filter(r => this.isMissing(r[col]));
+      const nMissing = missingRows.length;
+      if (nMissing > 0) {
+        issues.push(`${datasetName}: ${nMissing} missing values in [${col}]`);
+        const fillValue = this.modeValue(rows.map(r => r[col]));
+        rows.forEach(r => {
+          if (this.isMissing(r[col])) r[col] = fillValue;
+        });
+        if (rows.length && nMissing / rows.length > 0.05) {
+          escalations.push({
+            event: 'Data Integrity Failure',
+            dataset: datasetName,
+            column: col,
+            n_affected: nMissing,
+            action: 'Auto-remediated + Escalated (>5% threshold)'
+          });
+        }
+      }
+    });
+
+    Object.entries(rules.numeric_ranges || {}).forEach(([col, range]) => {
+      if (!headers.includes(col)) return;
+      const [low, high] = range;
+      let outOfRange = 0;
+      rows.forEach(r => {
+        const value = parseFloat(r[col]);
+        if (!Number.isFinite(value)) return;
+        if (value < low || value > high) {
+          outOfRange++;
+          r[col] = this.formatNumber(Math.max(low, Math.min(high, value)));
+        }
+      });
+      if (outOfRange > 0) {
+        issues.push(`${datasetName}: ${outOfRange} out-of-range values in [${col}]`);
+      }
+    });
+
+    const idCol = rules.no_duplicates_on;
+    if (idCol && headers.includes(idCol)) {
+      const seen = new Set();
+      const deduped = [];
+      let nDupes = 0;
+      rows.forEach(r => {
+        const key = this.isMissing(r[idCol]) ? '__MISSING__' : String(r[idCol]);
+        if (seen.has(key)) {
+          nDupes++;
+        } else {
+          seen.add(key);
+          deduped.push(r);
+        }
+      });
+      if (nDupes > 0) {
+        issues.push(`${datasetName}: ${nDupes} duplicate rows on [${idCol}]`);
+        cleaned.data.rows = deduped;
+      }
+    }
+
+    return { file: cleaned, issues, escalations };
+  },
+
+  modeValue: function(values) {
+    const counts = new Map();
+    values.filter(v => !this.isMissing(v)).forEach(v => {
+      const key = String(v);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    if (!counts.size) return '';
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+  },
+
+  formatNumber: function(value) {
+    const rounded = Math.round(value * 1000000000000) / 1000000000000;
+    return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+  },
+
   // ---------------------------------------------------------
   // DISTURBANCE INJECTION (SCN-003)
   // ---------------------------------------------------------
 
   injectDisturbances: function(files, m, config = { missing: 0.15, dupes: 0.1, drift: 0.2 }) {
     const cloned = this.cloneFiles(files);
-    const headers = cloned.flatMap(f => f.data.headers);
-    const critical = ['compliance_status', 'financial_rating', 'delivery_reliability', 'technical_score', 'price_score', 'ai_ranking_score', 'kpi_score']
-      .map(f => m[f] || this.autoDetectHeader(headers, f)).filter(Boolean);
-    
-    let summaryData = {
-        missingAffected: 0,
-        driftAffected: 0,
-        dupeRowsAdded: 0
-    };
+    const summaryData = { missingAffected: 0, driftAffected: 0, dupeRowsAdded: 0 };
 
-    cloned.forEach(file => {
-      // Missing Data & Score Drift
-      file.data.rows.forEach((row, i) => {
-        critical.forEach((field, j) => {
-          if (field in row && this.seeded(i + j * 13 + file.name.length) < config.missing) {
-            row[field] = '';
-            summaryData.missingAffected++;
-          }
+    // PERTURBATION 1 (Python Code 7): missing compliance_status in supplier file only
+    const supplierFile = cloned.find(f => /supplier|vendor|master/i.test(f.name)) ||
+      cloned.find(f => {
+        const c = m.compliance_status || this.autoDetectHeader(f.data.headers, 'compliance_status');
+        const fr = m.financial_rating  || this.autoDetectHeader(f.data.headers, 'financial_rating');
+        return !!(c && fr);
+      }) || cloned[0];
+    if (supplierFile) {
+      const cc = m.compliance_status || this.autoDetectHeader(supplierFile.data.headers, 'compliance_status');
+      if (cc) {
+        const rows = supplierFile.data.rows;
+        const nMissing = Math.floor(config.missing * rows.length);
+        this.pickSeededIndices(rows.length, nMissing, 7 + supplierFile.name.length).forEach(i => {
+          rows[i][cc] = '';
+          summaryData.missingAffected++;
         });
-        
-        ['technical_score', 'price_score', 'ai_ranking_score', 'kpi_score'].forEach(f => {
-          const field = m[f] || this.autoDetectHeader(file.data.headers, f);
-          if (field && this.isNumeric(row[field]) && this.seeded(i * 17 + field.length) < config.drift) {
-            const val = parseFloat(row[field]);
-            row[field] = (val * (1 + (this.seeded(i * 31 + field.length) - 0.5) * 0.4)).toFixed(2);
+      }
+    }
+
+    // PERTURBATION 2 (Python Code 7): score drift in ai_ranking_score across all files
+    const bidFile = cloned.find(f => /tender|bid|evaluation/i.test(f.name)) ||
+      cloned.find(f => !!(m.ai_ranking_score || this.autoDetectHeader(f.data.headers, 'ai_ranking_score')));
+    if (bidFile) {
+      const aiCol = m.ai_ranking_score || this.autoDetectHeader(bidFile.data.headers, 'ai_ranking_score');
+      if (aiCol) {
+        const rows = bidFile.data.rows;
+        const nDrift = Math.floor(config.drift * rows.length);
+        this.pickSeededIndices(rows.length, nDrift, 17 + bidFile.name.length).forEach(i => {
+          const val = parseFloat(rows[i][aiCol]);
+          if (!Number.isFinite(val)) return;
+          const factor = (this.seeded(i * 31 + bidFile.name.length) - 0.5) * 0.24;
+          rows[i][aiCol] = Math.max(0, Math.min(100, val * (1 + factor))).toFixed(2);
+          summaryData.driftAffected++;
+        });
+      }
+    }
+
+    // PERTURBATION 3 (Python Code 7): duplicate contract records only
+    const contractFile = cloned.find(f => /contract|execution|award/i.test(f.name)) ||
+      cloned.find(f => f.data.headers.some(h => /contract/i.test(h)));
+    if (contractFile) {
+      const rows = contractFile.data.rows;
+      const nDupes = Math.floor(config.dupes * rows.length);
+      const dupesToAdd = this.pickSeededIndices(rows.length, nDupes, 23 + contractFile.name.length)
+        .map(i => ({ ...rows[i] }));
+      summaryData.dupeRowsAdded += dupesToAdd.length;
+      contractFile.data.rows = rows.concat(dupesToAdd);
+    }
+
+    // PERTURBATION 4 (Python Code 7): KPI scores * uniform(0.80, 0.95) — applied to all kpi_score rows
+    const performanceFile = cloned.find(f => /performance|monitoring/i.test(f.name)) ||
+      cloned.find(f => !!(m.kpi_score || this.autoDetectHeader(f.data.headers, 'kpi_score')));
+    if (performanceFile) {
+      const kc = m.kpi_score || this.autoDetectHeader(performanceFile.data.headers, 'kpi_score');
+      if (kc) {
+        performanceFile.data.rows.forEach((row, i) => {
+          if (this.isNumeric(row[kc])) {
+            const factor = 0.80 + this.seeded(i * 41 + performanceFile.name.length) * 0.15;
+            row[kc] = (parseFloat(row[kc]) * factor).toFixed(2);
             summaryData.driftAffected++;
           }
         });
-      });
-      
-      // Duplicates
-      const duplicatesToAdd = file.data.rows.filter((_, i) => this.seeded(i * 23 + file.name.length) < config.dupes).map(r => ({ ...r }));
-      summaryData.dupeRowsAdded += duplicatesToAdd.length;
-      file.data.rows = file.data.rows.concat(duplicatesToAdd);
-    });
+      }
+    }
 
     AppState.lastDisturbanceSummary = summaryData;
     return cloned;
+  },
+
+  pickSeededIndices: function(length, count, salt) {
+    return Array.from({ length }, (_, i) => i)
+      .sort((a, b) => this.seeded(a * 97 + salt) - this.seeded(b * 97 + salt))
+      .slice(0, Math.max(0, Math.min(length, count)));
   },
 
   // ---------------------------------------------------------
